@@ -65,7 +65,6 @@
             padding: 30px 0 50px 0;
         }
         
-        /* 確保不論何種狀態，A4 紙張本身的大小絕對固定，不會消失 */
         .a4-page {
             width: 210mm; 
             height: 297mm;
@@ -74,8 +73,7 @@
             box-sizing: border-box;
             padding: 15mm;
             display: grid;
-            /* 預設未上傳底圖時的格子寬高，上傳後會被 JS 動態更新 */
-            grid-template-columns: repeat(2, 85mm); 
+            grid-template-columns: repeat(2, 85.6mm); 
             grid-template-rows: repeat(2, 54mm);    
             gap: 0px; /* 緊連排列，無空隙 */
             justify-content: center;
@@ -84,7 +82,7 @@
             page-break-after: always;
         }
 
-        /* 識別證卡片本體：加上基礎預覽樣式，沒底圖也看得到 */
+        /* 識別證卡片本體 */
         .id-card {
             box-sizing: border-box;
             position: relative;
@@ -93,14 +91,14 @@
             background-repeat: no-repeat;
             overflow: hidden;
             background-color: #fafafa; 
-            border: 1px dashed #999999; /* 預設虛線提示框 */
+            border: 1px dashed #999999; 
             width: 100%;
             height: 100%;
         }
 
-        /* 裁切虛線樣式 */
+        /* 🛠️ 裁切虛線樣式：已修改顏色為 #ccc */
         .has-crop-lines .id-card {
-            outline: 1px dashed #000000; 
+            outline: 1px dashed #cccccc; 
         }
 
         /* 可拖曳與縮放的文字容器 */
@@ -159,7 +157,7 @@
             .resize-handle, .delete-btn { display: none !important; }
             .a4-page { box-shadow: none !important; margin: 0 !important; padding: 15mm !important; width: 210mm !important; height: 297mm !important; }
             .id-card { border: none !important; background-color: transparent !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .has-crop-lines .id-card { outline: 1px dashed #000000 !important; }
+            .has-crop-lines .id-card { outline: 1px dashed #cccccc !important; }
         }
     </style>
 </head>
@@ -232,7 +230,7 @@
                 <select id="text-align" onchange="updateSelectedStyle('justifyContent', this.value)">
                     <option value="flex-start">靠左</option>
                     <option value="center">置中</option>
-                    <option value="flex-end">靠右</option>
+                    <option value="flex-end">靠夜</option>
                 </select>
             </div>
             <div id="dpi-msg" style="color: #fd7e14; font-size: 13px; margin-left: auto; font-weight: bold;">目前狀態：採用預設尺寸 (85.6x54mm)</div>
@@ -244,10 +242,9 @@
     <script>
         let currentBgUrl = ''; 
         let rawData = [];      
-        let fieldsConfig = []; // 預設欄位數量為 0
+        let fieldsConfig = []; 
         let selectedKey = null; 
         
-        // 預設未上傳底圖前的初始基準物理公釐尺寸
         let cardWidthMm = 85.6;  
         let cardHeightMm = 54; 
 
@@ -256,7 +253,7 @@
                 const savedUrl = localStorage.getItem('saved_sheet_url');
                 if (savedUrl) document.getElementById('sheet-url').value = savedUrl;
             } catch(e) {}
-            renderPages(); // 一打開就立刻執行，強制定型 A4 預覽
+            renderPages(); 
         }
 
         function toggleCropLines() {
@@ -333,7 +330,6 @@
                 
                 const img = new Image();
                 img.onload = function() {
-                    // 自動判定：如果大於 1200 像素，自動以 300 DPI 換算實體 mm 尺寸
                     let estimatedDPI = 96;
                     if (img.naturalWidth > 1200) {
                         estimatedDPI = 300; 
@@ -397,12 +393,17 @@
             container.innerHTML = '';
             const cardsPerPage = 4; 
             
-            // 構造數據源
-            let dummyRow = {};
-            fieldsConfig.forEach(f => dummyRow[f.key] = `[${f.key}]`);
-            
-            // 確保最低限度一定生成一個 A4 頁面與 2x2 格線
-            const dataList = rawData.length > 0 ? rawData : (fieldsConfig.length > 0 ? [dummyRow, dummyRow, dummyRow, dummyRow] : [{}, {}, {}, {}]);
+            // 🛠️【核心修正Bug位置】：優化資料源陣列判斷邏輯
+            let dataList = [];
+            if (rawData.length > 0) {
+                // 如果已經成功取得雲端資料，完全套用雲端資料流
+                dataList = rawData;
+            } else {
+                // 否則構造一組「固定 4 個」的空白預覽對象，防止一開始或手動加欄位時畫面縮水
+                let dummyRow = {};
+                fieldsConfig.forEach(f => dummyRow[f.key] = `[${f.key}]`);
+                dataList = [dummyRow, dummyRow, dummyRow, dummyRow];
+            }
 
             let currentPageEl = null;
 
@@ -410,7 +411,6 @@
                 if (index % cardsPerPage === 0) {
                     currentPageEl = document.createElement('div');
                     currentPageEl.className = 'a4-page';
-                    // 固定 2x2 排版，緊連無空隙的設定核心
                     currentPageEl.style.gridTemplateColumns = `repeat(2, ${cardWidthMm}mm)`;
                     currentPageEl.style.gridTemplateRows = `repeat(2, ${cardHeightMm}mm)`;
                     container.appendChild(currentPageEl);
@@ -426,7 +426,6 @@
                     layer.dataset.key = cfg.key;
                     if (cfg.key === selectedKey) layer.classList.add('selected');
 
-                    // 樣式與相對定位百分比應用
                     layer.style.top = cfg.top + '%';
                     layer.style.left = cfg.left + '%';
                     layer.style.width = cfg.width + '%';
@@ -439,18 +438,16 @@
                     layer.style.color = cfg.color;
                     layer.style.justifyContent = cfg.justifyContent;
                     
-                    layer.innerText = item[cfg.key] !== undefined ? item[cfg.key] : `[${cfg.key}]`;
+                    // 填入真正的欄位內容，如果該筆名單中沒這個屬性，顯示空字串
+                    layer.innerText = item[cfg.key] !== undefined ? item[cfg.key] : '';
 
-                    // 只有第一張卡片的圖層可操控
                     if (index === 0) {
                         layer.addEventListener('mousedown', (e) => startDragOrResize(e, cfg, layer, cardEl));
                         
-                        // 縮放點
                         const handle = document.createElement('div');
                         handle.className = 'resize-handle';
                         layer.appendChild(handle);
 
-                        // 刪除按鈕
                         const delBtn = document.createElement('div');
                         delBtn.className = 'delete-btn';
                         delBtn.innerText = '×';
@@ -514,7 +511,6 @@
             document.addEventListener('mouseup', onMouseUp);
         }
 
-        // 初始化
         initSystem();
     </script>
 </body>
