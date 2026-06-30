@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>專業排版編輯器 - 300DPI自動縮減無縫系統</title>
+    <title>專業排版編輯器 - 2x2 無縫識別證系統</title>
     <style>
         body {
             font-family: "Microsoft JhengHei", sans-serif;
@@ -91,9 +91,7 @@
             background-repeat: no-repeat;
             overflow: hidden;
             background-color: #fafafa; 
-            width: 85mm;  /* 預設未上傳圖片前的基準尺寸 */
-            height: 54mm;
-            border: 1px dashed #ccc;
+            border: 1px dashed #999999; /* 預設虛線提示框，確保沒上圖也看得到 */
         }
 
         /* 裁切虛線控制樣式 */
@@ -179,4 +177,51 @@
                 <input type="checkbox" id="crop-lines-toggle" onchange="toggleCropLines()">
                 <label for="crop-lines-toggle" style="font-weight: bold; cursor: pointer; color: #333;">開啟裁切虛線</label>
             </div>
-            <button class="btn btn-print" onclick="window.print
+            <button class="btn btn-print" onclick="window.print()">3. 產生 PDF / 列印</button>
+        </div>
+
+        <div class="editor-tools">
+            <div class="input-box">
+                <label>手動新增自訂欄位：</label>
+                <div style="display: flex; gap: 5px;">
+                    <input type="text" id="new-field-key" style="width: 130px;" placeholder="輸入欄位名稱">
+                    <button class="btn" style="padding: 5px 10px;" onclick="addNewField('', true)">＋</button>
+                </div>
+            </div>
+            <div style="border-left: 1px solid #ccc; height: 40px; margin: 0 5px;"></div>
+            <div class="input-box">
+                <label>字型</label>
+                <select id="font-family" onchange="updateSelectedStyle('fontFamily', this.value)">
+                    <option value="'Microsoft JhengHei', sans-serif">微軟正黑體</option>
+                    <option value="'PMingLiU', serif">新細明體</option>
+                    <option value="Arial, sans-serif">Arial</option>
+                    <option value="'Times New Roman', serif">Times New Roman</option>
+                </select>
+            </div>
+            <div class="input-box">
+                <label>大小 (px)</label>
+                <input type="number" id="font-size" value="24" style="width: 65px;" oninput="updateSelectedStyle('fontSize', this.value + 'px')">
+            </div>
+            <div class="input-box">
+                <label>粗細</label>
+                <select id="font-weight" onchange="updateSelectedStyle('fontWeight', this.value)">
+                    <option value="normal">常規</option>
+                    <option value="bold">粗體</option>
+                    <option value="300">細體</option>
+                    <option value="900">極粗</option>
+                </select>
+            </div>
+            <div class="input-box">
+                <label>字距 (px)</label>
+                <input type="number" id="letter-spacing" value="0" style="width: 60px;" oninput="updateSelectedStyle('letterSpacing', this.value + 'px')">
+            </div>
+            <div class="input-box">
+                <label>行高 (倍)</label>
+                <input type="number" id="line-height" value="1.2" step="0.1" style="width: 60px;" oninput="updateSelectedStyle('lineHeight', this.value)">
+            </div>
+            <div class="input-box">
+                <label>顏色</label>
+                <input type="color" id="font-color" onchange="updateSelectedStyle('color', this.value)">
+            </div>
+            <div class="input-box">
+                <label>對齊</label>
