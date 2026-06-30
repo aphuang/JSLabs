@@ -1,69 +1,400 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="zh-TW">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="">
-    <meta name="author" content="">
-    <link rel="icon" href="../../../../favicon.ico">
-    <title>Starter Template · Bootstrap</title>
-    
-    <!--Template based on URL below-->
-    <link rel="canonical" href="https://getbootstrap.com/docs/4.3/examples/starter-template/">
-
-    <!-- Bootstrap core CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-
-    <!-- Place your stylesheet here-->
-    <link href="/css/stylesheet.css" rel="stylesheet" type="text/css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>排版編輯器 - 2x2 智慧識別證批量系統</title>
     <style>
+        body {
+            font-family: "Microsoft JhengHei", sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #eef1f6;
+            user-select: none;
+        }
+
+        /* 頂部控制面板 */
+        #control-panel {
+            background-color: #ffffff;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .control-row {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .input-box { display: flex; flex-direction: column; gap: 5px; }
+        input[type="text"], select, input[type="number"], input[type="color"] {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .btn {
+            background-color: #007bff; color: white; border: none;
+            padding: 10px 18px; border-radius: 5px; cursor: pointer;
+            font-size: 14px; font-weight: bold;
+        }
+        .btn:hover { background-color: #0056b3; }
+        .btn-sync { background-color: #17a2b8; }
+        .btn-print { background-color: #28a745; }
         
-        @font-face {
-            font-family: winfont;
-            src: local("Microsoft JhengHei");
-            font-weight: bold;
+        /* 屬性編輯器工具列 */
+        .editor-tools {
+            background: #f8f9fa;
+            border: 1px dashed #007bff;
+            padding: 12px;
+            border-radius: 6px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        /* A4 畫布與固定 2x2 排版 */
+        .preview-container {
+            display: flex; flex-direction: column; align-items: center;
+            gap: 30px; padding: 30px 0 50px 0;
         }
         
-        @font-face {
-            font-family: macfont;
-            src: local("PingFangSC");
-            font-weight: lighter;
+        .a4-page {
+            width: 210mm; 
+            height: 297mm;
+            background-color: #ffffff;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            box-sizing: border-box;
+            padding: 15mm;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr); /* 固定 2 欄 */
+            grid-template-rows: repeat(2, 1fr);    /* 固定 2 列 */
+            gap: 10mm;
+            page-break-after: always;
         }
-        
-        html,body{ font-size: 30px!important;}
-        *{ font-size: 20px;}
-        .a *{font-size: 40px;}
-        .b *{font-size: 60px;}
-        p{ font-size: 80px;}
-        
+
+        /* 識別證卡片本體 */
+        .id-card {
+            border: 2px dashed #999999;
+            box-sizing: border-box;
+            position: relative;
+            background-size: 100% 100%;
+            background-position: center;
+            background-repeat: no-repeat;
+            overflow: hidden;
+            background-color: #fafafa; 
+            border-radius: 4px;
+        }
+
+        /* 可拖曳與縮放的文字容器 */
+        .text-layer {
+            position: absolute;
+            cursor: move;
+            border: 1px dotted #ff5722; 
+            box-sizing: border-box;
+            padding: 2px;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+        }
+        .text-layer.selected {
+            border: 1px dashed #007bff !important;
+            background-color: rgba(0, 123, 255, 0.08);
+        }
+        .resize-handle {
+            width: 10px; height: 10px;
+            background-color: #007bff;
+            position: absolute; right: 0; bottom: 0;
+            cursor: se-resize;
+            border-radius: 50%;
+        }
+
+        /* 印出/產生PDF時的防干擾樣式 */
+        @media print {
+            #control-panel { display: none !important; }
+            body { background: none !important; }
+            .preview-container { padding: 0 !important; }
+            .text-layer { border: none !important; background: none !important; }
+            .resize-handle { display: none !important; }
+            .a4-page { box-shadow: none !important; margin: 0 !important; padding: 15mm !important; width: 210mm !important; height: 297mm !important; }
+            .id-card { border: none !important; background-color: transparent !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
     </style>
 </head>
-
 <body>
 
-    <main role="main" class="container mt-5">
-       
-       <div class="a">
-          aaaaaaa
-           <div class="b">
-              bbbbbbb
-               <div class="c">
-                   <p>ccccccc</p>
-               </div>
-           </div>
-       </div>
-       
-    
-    </main><!-- /.container -->
+    <div id="control-panel">
+        <h2>排版編輯器 - 2x2 批量識別證系統</h2>
+        <div class="control-row">
+            <div class="input-box">
+                <label>1. Google Sheets CSV 發布網址 (本地開啟時無法同步，需部署至 GitHub)：</label>
+                <input type="text" id="sheet-url" style="width: 350px;" placeholder="請輸入網址">
+            </div>
+            <button class="btn btn-sync" onclick="fetchGoogleSheet()">同步雲端資料</button>
+            <div class="input-box">
+                <label>2. 上傳底圖：</label>
+                <input type="file" id="bg-upload" accept="image/*">
+            </div>
+            <button class="btn btn-print" onclick="window.print()">3. 產生 PDF / 列印</button>
+        </div>
 
+        <div class="editor-tools">
+            <div class="input-box">
+                <label>新增/關聯資料欄位：</label>
+                <div style="display: flex; gap: 5px;">
+                    <input type="text" id="new-field-key" style="width: 130px;" placeholder="輸入表格表頭名稱">
+                    <button class="btn" style="padding: 5px 10px;" onclick="addNewField()">＋ 新增</button>
+                </div>
+            </div>
+            <div style="border-left: 1px solid #ccc; height: 40px; margin: 0 10px;"></div>
+            <div class="input-box">
+                <label>字型</label>
+                <select id="font-family" onchange="updateSelectedStyle('fontFamily', this.value)">
+                    <option value="'Microsoft JhengHei', sans-serif">微軟正黑體</option>
+                    <option value="'PMingLiU', serif">新細明體</option>
+                    <option value="Arial, sans-serif">Arial</option>
+                    <option value="'Times New Roman', serif">Times New Roman</option>
+                </select>
+            </div>
+            <div class="input-box">
+                <label>大小 (px)</label>
+                <input type="number" id="font-size" value="28" style="width: 70px;" oninput="updateSelectedStyle('fontSize', this.value + 'px')">
+            </div>
+            <div class="input-box">
+                <label>顏色</label>
+                <input type="color" id="font-color" onchange="updateSelectedStyle('color', this.value)">
+            </div>
+            <div class="input-box">
+                <label>對齊</label>
+                <select id="text-align" onchange="updateSelectedStyle('justifyContent', this.value)">
+                    <option value="flex-start">靠左</option>
+                    <option value="center" selected>置中</option>
+                    <option value="flex-end">靠右</option>
+                </select>
+            </div>
+            <div id="edit-hint" style="color: #666; font-size: 13px; margin-left: auto;">💡 點選橘/藍虛線框可拖曳位置或拉伸寬度。</div>
+        </div>
+    </div>
 
-    <!-- Bootstrap core JavaScript
-    ================================================== -->
-    <!-- Placed at the end of the document so the pages load faster -->
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    <div class="preview-container" id="pages-container"></div>
 
+    <script>
+        let currentBgUrl = ''; 
+        let rawData = [];      
+        let fieldsConfig = [
+            { key: '姓名', top: 35, left: 10, width: 80, height: 15, fontFamily: "'Microsoft JhengHei', sans-serif", fontSize: '28px', color: '#000000', justifyContent: 'center' },
+            { key: '部門', top: 55, left: 10, width: 80, height: 12, fontFamily: "'Microsoft JhengHei', sans-serif", fontSize: '18px', color: '#666666', justifyContent: 'center' }
+        ];
+        let selectedKey = null; 
+
+        // 【修正核心】：不用 window.onload，改用直接執行的初始化，確保 file:/// 也能強制畫出畫面
+        function initSystem() {
+            try {
+                const savedUrl = localStorage.getItem('saved_sheet_url');
+                if (savedUrl) document.getElementById('sheet-url').value = savedUrl;
+            } catch(e) {
+                console.log("本地 file 協議限制了 localStorage");
+            }
+            renderPages(); 
+        }
+
+        function addNewField() {
+            const keyInput = document.getElementById('new-field-key');
+            const key = keyInput.value.trim();
+            if (!key) return alert('請輸入欄位名稱！');
+            if (fieldsConfig.find(f => f.key === key)) return alert('此欄位已存在！');
+            
+            fieldsConfig.push({
+                key: key, top: 10, left: 10, width: 80, height: 12,
+                fontFamily: "'Microsoft JhengHei', sans-serif", fontSize: '18px', color: '#000000', justifyContent: 'center'
+            });
+            keyInput.value = '';
+            renderPages();
+            selectField(key);
+        }
+
+        function selectField(key) {
+            selectedKey = key;
+            document.querySelectorAll('.text-layer').forEach(el => {
+                if (el.dataset.key === key) el.classList.add('selected');
+                else el.classList.remove('selected');
+            });
+            const cfg = fieldsConfig.find(f => f.key === key);
+            if (cfg) {
+                document.getElementById('font-family').value = cfg.fontFamily;
+                document.getElementById('font-size').value = parseInt(cfg.fontSize);
+                document.getElementById('font-color').value = cfg.color;
+                document.getElementById('text-align').value = cfg.justifyContent;
+            }
+        }
+
+        function updateSelectedStyle(property, value) {
+            if (!selectedKey) return;
+            const cfg = fieldsConfig.find(f => f.key === selectedKey);
+            if (cfg) {
+                cfg[property] = value;
+                document.querySelectorAll(`.text-layer[data-key="${selectedKey}"]`).forEach(el => {
+                    el.style[property] = value;
+                });
+            }
+        }
+
+        document.getElementById('bg-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                currentBgUrl = event.target.result;
+                document.querySelectorAll('.id-card').forEach(card => card.style.backgroundImage = `url(${currentBgUrl})`);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        async function fetchGoogleSheet() {
+            if (window.location.protocol === 'file:') {
+                alert('【本地安全限制】\n目前您是直接雙擊 HTML 檔案開啟。瀏覽器安全機制禁止在本機（file://）環境下連線 Google Sheets。\n\n請直接將此檔案上傳到 GitHub 並開啟 GitHub Pages 網址，功能即可完全正常運作！');
+                return;
+            }
+            
+            const url = document.getElementById('sheet-url').value.trim();
+            if (!url || !url.includes('output=csv')) return alert('請輸入正確的 Google Sheets CSV 發布網址！');
+            try {
+                localStorage.setItem('saved_sheet_url', url);
+                const response = await fetch(url);
+                const csvText = await response.text();
+                parseCSV(csvText);
+                alert(`同步成功！已載入 ${rawData.length} 筆資料。`);
+            } catch (error) { alert('同步失敗，請確認權限或網址。'); }
+        }
+
+        function parseCSV(text) {
+            const lines = text.split(/\r?\n/);
+            if (lines.length < 2) return;
+            const headers = lines[0].split(',').map(h => h.trim());
+            rawData = [];
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i]) continue;
+                const cols = lines[i].split(',').map(c => c.trim());
+                if (cols.length === headers.length) {
+                    let rowObj = {};
+                    headers.forEach((h, idx) => rowObj[h] = cols[idx]);
+                    rawData.push(rowObj);
+                }
+            }
+            renderPages();
+        }
+
+        function renderPages() {
+            const container = document.getElementById('pages-container');
+            container.innerHTML = '';
+            const cardsPerPage = 4; 
+            
+            const dataList = rawData.length > 0 ? rawData : [
+                {'姓名': '張三 (本機預覽)', '部門': '研發部'},
+                {'姓名': '李四 (本機預覽)', '部門': '設計部'},
+                {'姓名': '王五 (本機預覽)', '部門': '行銷部'},
+                {'姓名': '趙六 (本機預覽)', '部門': '營運部'}
+            ];
+
+            let currentPageEl = null;
+
+            dataList.forEach((item, index) => {
+                if (index % cardsPerPage === 0) {
+                    currentPageEl = document.createElement('div');
+                    currentPageEl.className = 'a4-page';
+                    container.appendChild(currentPageEl);
+                }
+
+                const cardEl = document.createElement('div');
+                cardEl.className = 'id-card';
+                if (currentBgUrl) cardEl.style.backgroundImage = `url(${currentBgUrl})`;
+
+                fieldsConfig.forEach(cfg => {
+                    const layer = document.createElement('div');
+                    layer.className = 'text-layer';
+                    layer.dataset.key = cfg.key;
+                    if (cfg.key === selectedKey) layer.classList.add('selected');
+
+                    layer.style.top = cfg.top + '%';
+                    layer.style.left = cfg.left + '%';
+                    layer.style.width = cfg.width + '%';
+                    layer.style.height = cfg.height + '%';
+                    layer.style.fontFamily = cfg.fontFamily;
+                    layer.style.fontSize = cfg.fontSize;
+                    layer.style.color = cfg.color;
+                    layer.style.justifyContent = cfg.justifyContent;
+                    
+                    layer.innerText = item[cfg.key] !== undefined ? item[cfg.key] : `[${cfg.key}]`;
+
+                    if (index === 0) {
+                        layer.addEventListener('mousedown', (e) => startDragOrResize(e, cfg, layer, cardEl));
+                        const handle = document.createElement('div');
+                        handle.className = 'resize-handle';
+                        layer.appendChild(handle);
+                    }
+
+                    cardEl.appendChild(layer);
+                });
+
+                currentPageEl.appendChild(cardEl);
+            });
+        }
+
+        function startDragOrResize(e, cfg, layer, cardEl) {
+            e.stopPropagation();
+            selectField(cfg.key);
+
+            const isResize = e.target.classList.contains('resize-handle');
+            const cardRect = cardEl.getBoundingClientRect();
+            
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const startLeft = (cfg.left / 100) * cardRect.width;
+            const startTop = (cfg.top / 100) * cardRect.height;
+            const startWidth = (cfg.width / 100) * cardRect.width;
+            const startHeight = (cfg.height / 100) * cardRect.height;
+
+            function onMouseMove(moveEvent) {
+                const deltaX = moveEvent.clientX - startX;
+                const deltaY = moveEvent.clientY - startY;
+
+                if (isResize) {
+                    const newWidthPct = ((startWidth + deltaX) / cardRect.width) * 100;
+                    const newHeightPct = ((startHeight + deltaY) / cardRect.height) * 100;
+                    cfg.width = Math.max(5, newWidthPct);
+                    cfg.height = Math.max(2, newHeightPct);
+                } else {
+                    const newLeftPct = ((startLeft + deltaX) / cardRect.width) * 100;
+                    const newTopPct = ((startTop + deltaY) / cardRect.height) * 100;
+                    cfg.left = Math.max(0, Math.min(95, newLeftPct));
+                    cfg.top = Math.max(0, Math.min(95, newTopPct));
+                }
+
+                document.querySelectorAll(`.text-layer[data-key="${cfg.key}"]`).forEach(el => {
+                    el.style.left = cfg.left + '%';
+                    el.style.top = cfg.top + '%';
+                    el.style.width = cfg.width + '%';
+                    el.style.height = cfg.height + '%';
+                });
+            }
+
+            function onMouseUp() {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        }
+
+        // 立即執行初始化
+        initSystem();
+    </script>
 </body>
 </html>
