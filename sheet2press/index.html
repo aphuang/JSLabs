@@ -406,7 +406,18 @@
                     <button class="btn btn-primary" style="padding: 4px 8px;" onclick="addNewField('', true)">＋</button>
                 </div>
             </div>
+            
+            <!-- 即時動態尺寸調整欄位 (新增) -->
+            <div class="tool-item" style="border-left: 1px solid #cbd5e0; padding-left: 10px;">
+                <label>卡片寬度 (cm)</label>
+                <input type="number" id="card-width-input" value="8.56" step="0.05" min="3" max="20" style="width: 75px;" oninput="updateCardDimensions()">
+            </div>
             <div class="tool-item">
+                <label>卡片高度 (cm)</label>
+                <input type="number" id="card-height-input" value="5.40" step="0.05" min="3" max="20" style="width: 75px;" oninput="updateCardDimensions()">
+            </div>
+
+            <div class="tool-item" style="border-left: 1px solid #cbd5e0; padding-left: 10px;">
                 <label>字型</label>
                 <select id="font-family" onchange="updateSelectedStyle('fontFamily', this.value)">
                     <option value="'Microsoft JhengHei', sans-serif">微軟正黑體</option>
@@ -494,6 +505,7 @@
                 }
             } catch(e) {}
             validateSteps();
+            syncSizeInputs();
             renderPages(); 
         }
 
@@ -510,6 +522,29 @@
                 toast.style.opacity = '0';
                 setTimeout(() => { toast.style.display = 'none'; }, 300);
             }, 3000);
+        }
+
+        // 同步內部寬高數據至 cm 輸入框
+        function syncSizeInputs() {
+            document.getElementById('card-width-input').value = (cardWidthMm / 10).toFixed(2);
+            document.getElementById('card-height-input').value = (cardHeightMm / 10).toFixed(2);
+        }
+
+        // 當使用者輸入 cm 數值時即時變更網格與卡片排版
+        function updateCardDimensions() {
+            const wCm = parseFloat(document.getElementById('card-width-input').value);
+            const hCm = parseFloat(document.getElementById('card-height-input').value);
+
+            if (isNaN(wCm) || isNaN(hCm) || wCm <= 0 || hCm <= 0) return;
+
+            cardWidthMm = wCm * 10;
+            cardHeightMm = hCm * 10;
+
+            document.documentElement.style.setProperty('--card-width', `${cardWidthMm}mm`);
+            document.documentElement.style.setProperty('--card-height', `${cardHeightMm}mm`);
+
+            document.getElementById('dpi-msg').innerText = `📐 當前尺寸：${cardWidthMm.toFixed(1)}x${cardHeightMm.toFixed(1)}mm`;
+            renderPages();
         }
 
         // 調校 UI 各步驟的勾選狀態與色彩變更
@@ -630,7 +665,10 @@
                     card.classList.add('completed');
                     document.getElementById('status-3').innerText = '已上傳 ✓';
                     
-                    document.getElementById('dpi-msg').innerText = `📐 2x2 最佳適配卡片：${cardWidthMm.toFixed(1)}x${cardHeightMm.toFixed(1)}mm`;
+                    document.getElementById('dpi-msg').innerText = `📐 當前尺寸：${cardWidthMm.toFixed(1)}x${cardHeightMm.toFixed(1)}mm`;
+                    
+                    // 同步到輸入框
+                    syncSizeInputs();
                     showToast('底圖尺寸已自動依 2x2 等比無縫縮放調校完成！', 'success');
                     renderPages();
                 };
@@ -764,6 +802,8 @@
                 {'姓名': '王思婷', '部門': '產品設計組', '員工編號': 'UIX-05'},
                 {'姓名': '蔡志強', '部門': '資訊安全處', '員工編號': 'SEC-06'}
             ];
+            
+            syncSizeInputs();
             renderPages();
             selectField('姓名');
             showToast('已成功為您載入預設示範：2x2 無縫等比底圖及 6 筆測試名單（自動分兩頁生成）！', 'success');
