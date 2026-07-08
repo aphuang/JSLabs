@@ -6,32 +6,31 @@
     <title>專業排版編輯器 - 2x2 智慧無縫識別證批量系統</title>
     <style>
         :root {
-            --primary: #6366f1;
-            --primary-hover: #4f46e5;
-            --success: #10b981;
-            --success-hover: #059669;
-            --warning: #f97316;
-            --warning-hover: #ea580c;
-            --danger: #ef4444;
-            --danger-hover: #dc2626;
-            --bg-dark: #0b0f19;
-            --panel-bg: rgba(20, 27, 45, 0.85);
-            --border-light: rgba(255, 255, 255, 0.08);
-            --border-hover: rgba(255, 255, 255, 0.18);
-            --text-main: #f8fafc;
-            --text-sub: #94a3b8;
+            --primary: #7d8f76; /* 鼠尾草綠 Sage Green */
+            --primary-hover: #677860;
+            --success: #8fa89b; /* 草木綠 Herbal Green */
+            --success-hover: #7b9487;
+            --warning: #d48c70; /* 暖泥陶土橘 Terracotta */
+            --warning-hover: #c1785c;
+            --danger: #db7c75; /* 珊瑚粉 Dusty Coral */
+            --danger-hover: #c5655d;
+            --bg-light: #faf8f5; /* 燕麥白 Oatmeal Cream */
+            --panel-bg: #ffffff; /* 純淨暖白 */
+            --border-light: #e6dfd5; /* 溫和暖灰線條 */
+            --border-hover: #cbd5e1;
+            --text-main: #3d423e; /* 暖炭黑 Warm Charcoal */
+            --text-sub: #8a928c; /* 霧霾灰綠 Muted Grey-green */
+            --badge-bg: #f3eee7; /* 燕麥米色 */
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Microsoft JhengHei", sans-serif;
             margin: 0;
             padding: 0;
-            background-color: var(--bg-dark);
+            background-color: var(--bg-light);
             background-image: 
-                radial-gradient(rgba(255, 255, 255, 0.05) 1.2px, transparent 1.2px),
-                linear-gradient(180deg, #0f172a 0%, #0b0f19 100%);
-            background-size: 24px 24px, 100% 100%;
-            background-attachment: fixed;
+                radial-gradient(#e5dfd3 1px, transparent 1px);
+            background-size: 20px 20px;
             user-select: none;
             color: var(--text-main);
             min-height: 100vh;
@@ -40,10 +39,8 @@
         /* 頂部引導控制面板 */
         #control-panel {
             background-color: var(--panel-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
             padding: 24px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 4px 15px rgba(142, 136, 122, 0.08);
             position: sticky;
             top: 0;
             z-index: 1000;
@@ -52,12 +49,10 @@
 
         h2 {
             margin: 0 0 20px 0;
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 800;
             letter-spacing: 0.5px;
-            background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            color: var(--text-main);
             display: flex;
             align-items: center;
             gap: 10px;
@@ -72,26 +67,24 @@
         }
 
         .step-card {
-            background: rgba(30, 41, 59, 0.45);
+            background: #fdfdfd;
             border: 1px solid var(--border-light);
-            border-radius: 12px;
+            border-radius: 10px;
             padding: 16px;
             position: relative;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.25s ease;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
         }
         .step-card:hover {
-            border-color: var(--border-hover);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+            border-color: var(--primary);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(125, 143, 118, 0.08);
         }
         .step-card.completed {
-            border-color: rgba(16, 185, 129, 0.3);
-            background-color: rgba(16, 185, 129, 0.05);
-            box-shadow: 0 0 15px rgba(16, 185, 129, 0.05);
+            border-color: var(--success);
+            background-color: rgba(143, 168, 155, 0.04);
         }
         .step-header {
             display: flex;
@@ -101,11 +94,11 @@
             font-weight: 700;
             font-size: 13px;
             color: var(--text-main);
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
         }
         .step-badge {
-            background: var(--primary);
-            color: white;
+            background: var(--badge-bg);
+            color: var(--text-main);
             border-radius: 50%;
             width: 22px;
             height: 22px;
@@ -114,15 +107,16 @@
             justify-content: center;
             font-size: 11px;
             font-weight: 800;
-            box-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
+            border: 1px solid var(--border-light);
         }
         .step-card.completed .step-badge {
             background: var(--success);
-            box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+            color: white;
+            border-color: var(--success);
         }
         .step-status {
             font-size: 11px;
-            font-weight: 800;
+            font-weight: 700;
             color: var(--text-sub);
         }
         .step-card.completed .step-status {
@@ -134,10 +128,10 @@
         .step-card input[type="password"] {
             width: 100%;
             padding: 9px 12px;
-            background: rgba(15, 23, 42, 0.6);
+            background: #fcfbfa;
             border: 1px solid var(--border-light);
-            border-radius: 8px;
-            font-size: 13px;
+            border-radius: 6px;
+            font-size: 12px;
             color: var(--text-main);
             box-sizing: border-box;
             margin-top: 5px;
@@ -147,16 +141,15 @@
         .step-card input[type="password"]:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
-            background: rgba(15, 23, 42, 0.8);
+            background: #ffffff;
         }
         .file-upload-label {
             display: block;
-            background: rgba(15, 23, 42, 0.4);
-            border: 1.5px dashed var(--border-light);
+            background: #faf8f5;
+            border: 1px dashed var(--border-light);
             padding: 10px;
             text-align: center;
-            border-radius: 8px;
+            border-radius: 6px;
             font-size: 12px;
             cursor: pointer;
             margin-top: 5px;
@@ -169,8 +162,8 @@
         }
         .file-upload-label:hover {
             border-color: var(--primary);
-            color: var(--text-main);
-            background: rgba(99, 102, 241, 0.08);
+            color: var(--primary);
+            background: rgba(125, 143, 118, 0.05);
         }
         .thumbnail-preview {
             width: 50px;
@@ -180,15 +173,15 @@
             border-radius: 4px;
             display: none;
             margin: 8px auto 0 auto;
-            background: rgba(0, 0, 0, 0.3);
+            background: #fff;
         }
 
         /* 橫向排版屬性工具列 */
         .editor-tools {
-            background: rgba(30, 41, 59, 0.3);
+            background: #fdfdfd;
             border: 1px solid var(--border-light);
             padding: 12px 20px;
-            border-radius: 12px;
+            border-radius: 10px;
             display: flex;
             gap: 16px;
             align-items: center;
@@ -208,7 +201,7 @@
         }
         .tool-item select, .tool-item input {
             padding: 7px 10px;
-            background: rgba(15, 23, 42, 0.6);
+            background: #faf8f5;
             border: 1px solid var(--border-light);
             border-radius: 6px;
             font-size: 12px;
@@ -218,64 +211,57 @@
         }
         .tool-item select:focus, .tool-item input:focus {
             border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+            background: #ffffff;
         }
 
         /* 功能按鈕 */
         .btn {
             padding: 10px 18px;
-            border-radius: 8px;
+            border-radius: 6px;
             font-weight: 700;
             cursor: pointer;
-            font-size: 13px;
+            font-size: 12px;
             border: none;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease;
         }
         .btn-primary { 
-            background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%); 
+            background: var(--primary); 
             color: white; 
         }
         .btn-primary:hover { 
-            background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%); 
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+            background: var(--primary-hover); 
         }
         .btn-success { 
-            background: linear-gradient(135deg, var(--success) 0%, #059669 100%); 
+            background: var(--success); 
             color: white; 
         }
         .btn-success:hover { 
-            background: linear-gradient(135deg, #059669 0%, #047857 100%); 
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+            background: var(--success-hover); 
         }
         .btn-trigger { 
-            background: linear-gradient(135deg, var(--warning) 0%, #ea580c 100%); 
+            background: var(--warning); 
             color: white; 
             width: 100%; 
             margin-top: 5px; 
         }
         .btn-trigger:hover { 
-            background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); 
-            transform: translateY(-1px);
-            box-shadow: 0 6px 20px rgba(249, 115, 22, 0.4);
+            background: var(--warning-hover); 
         }
         .btn-demo { 
-            background: rgba(255, 255, 255, 0.08); 
+            background: #faf8f5; 
             color: var(--text-main); 
             padding: 6px 12px; 
             font-size: 11px; 
             margin-top: 5px; 
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border-light);
         }
         .btn-demo:hover { 
-            background: rgba(255, 255, 255, 0.15); 
-            border-color: rgba(255, 255, 255, 0.2);
+            background: var(--badge-bg);
+            border-color: var(--border-hover);
         }
 
         /* 預覽 A4 畫布區 */
@@ -300,7 +286,7 @@
             width: 210mm; 
             height: 297mm;
             background-color: #ffffff;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 4px 25px rgba(115, 102, 92, 0.08);
             box-sizing: border-box;
             padding: 15mm; 
             display: grid;
@@ -312,6 +298,7 @@
             position: relative;
             page-break-after: always;
             transition: transform 0.2s ease;
+            border: 1px solid var(--border-light);
         }
 
         /* 識別證卡片本體 */
@@ -322,15 +309,15 @@
             background-position: center;
             background-repeat: no-repeat;
             overflow: hidden;
-            background-color: #f1f5f9; 
-            border: 1px dashed #cbd5e1; 
+            background-color: #faf9f6; 
+            border: 1px dashed #e2dbd0; 
             width: 100%;
             height: 100%;
         }
 
-        /* 裁切虛線樣式：使用淡灰色 #cccccc */
+        /* 裁切虛線樣式：使用淡淡的溫和灰線 */
         .has-crop-lines .id-card {
-            outline: 1px dashed #cccccc; 
+            outline: 1px dashed #d5cebf; 
             outline-offset: -1px;
         }
 
@@ -338,18 +325,17 @@
         .text-layer {
             position: absolute;
             cursor: move;
-            border: 1.5px dotted #f97316; 
+            border: 1px dashed var(--warning); 
             box-sizing: border-box;
             padding: 2px 18px 2px 2px; 
             display: flex;
             align-items: center;
             overflow: visible; 
-            background: rgba(249, 115, 22, 0.05);
+            background: rgba(212, 140, 112, 0.04);
         }
         .text-layer.selected {
             border: 1.5px dashed var(--primary) !important;
-            background-color: rgba(99, 102, 241, 0.12);
-            box-shadow: 0 0 10px rgba(99, 102, 241, 0.15);
+            background-color: rgba(125, 143, 118, 0.08);
         }
         
         /* 縮放點 */
@@ -373,13 +359,13 @@
             background-color: var(--danger);
             color: white;
             border-radius: 50%;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: bold;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
             z-index: 11;
             transition: all 0.2s ease;
         }
@@ -388,30 +374,29 @@
             transform: scale(1.1);
         }
 
-        #ai-status { color: #a78bfa; font-weight: bold; font-size: 12px; margin-left: 10px; }
+        #ai-status { color: var(--primary); font-weight: bold; font-size: 12px; margin-left: 10px; }
 
         /* Zoom Slider Custom styling */
         input[type="range"] {
             -webkit-appearance: none;
             appearance: none;
-            background: rgba(255, 255, 255, 0.1);
+            background: var(--border-light);
             border-radius: 4px;
-            height: 6px;
+            height: 5px;
             outline: none;
         }
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 14px;
-            height: 14px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
             background: var(--primary);
             cursor: pointer;
             transition: transform 0.15s ease;
-            box-shadow: 0 0 8px rgba(99, 102, 241, 0.6);
         }
         input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.25);
+            transform: scale(1.2);
         }
 
         /* Toast 提示框 */
@@ -420,19 +405,18 @@
             bottom: 35px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            color: #ffffff;
-            padding: 14px 32px;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            background: var(--panel-bg);
+            border: 1.5px solid var(--border-light);
+            color: var(--text-main);
+            padding: 12px 28px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(115, 102, 92, 0.12);
             display: none;
             z-index: 9999;
             font-size: 13px;
             font-weight: 700;
             opacity: 0;
             transition: opacity 0.3s ease, transform 0.3s ease;
-            backdrop-filter: blur(10px);
         }
 
         /* 列印樣式設定 */
@@ -450,6 +434,7 @@
                 width: 210mm !important; 
                 height: 297mm !important; 
                 transform: none !important;
+                border: none !important;
             }
             .id-card { border: none !important; background-color: transparent !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .has-crop-lines .id-card { outline: 1px dashed #cccccc !important; }
@@ -460,7 +445,7 @@
 
     <!-- 控制面板 -->
     <div id="control-panel">
-        <h2>🏷️ 2x2 智慧無縫識別證批量系統</h2>
+        <h2>🌿 2x2 智慧無縫識別證批量系統</h2>
         
         <div class="steps-grid">
             <!-- Step 1 -->
@@ -516,10 +501,10 @@
             </div>
 
             <!-- Step 5 Button Wrapper -->
-            <div class="step-card" style="background: rgba(249, 115, 22, 0.04); border-color: rgba(249, 115, 22, 0.25);">
+            <div class="step-card" style="background: rgba(212, 140, 112, 0.04); border-color: rgba(212, 140, 112, 0.2);">
                 <div class="step-header" style="margin-bottom: 2px;">
                     <span style="font-weight: 800; color: var(--warning);">Step 5. 智慧一鍵執行</span>
-                    <span class="step-badge" style="background: var(--warning); box-shadow: 0 0 10px rgba(249, 115, 22, 0.3);">5</span>
+                    <span class="step-badge" style="background: var(--warning); color: white; border-color: var(--warning);">5</span>
                 </div>
                 <button class="btn btn-trigger" onclick="runSmartLayout()">載入資料與 AI 排版</button>
                 <button class="btn btn-demo" onclick="loadLocalDemo()">載入本機預設示範</button>
@@ -599,7 +584,7 @@
             
             <button class="btn btn-success" style="margin-left: auto;" onclick="window.print()">🖨️ 直接列印 PDF</button>
             <span id="ai-status"></span>
-            <div id="dpi-msg" style="color: var(--warning); font-size: 11px; font-weight: 800;"></div>
+            <div id="dpi-msg" style="color: var(--primary); font-size: 11px; font-weight: 800;"></div>
         </div>
     </div>
 
@@ -623,7 +608,7 @@
         let finishedDesignMime = '';
 
         window.onload = function() {
-            // 載入預設的精美內置 SVG 背景（確保一打開網頁不呈現完全空白）
+            // 載入配合大地色系風格的新款優雅背景 SVG
             loadDefaultSvgBackground();
 
             try {
@@ -646,14 +631,14 @@
             if (!toast) return;
             toast.innerText = msg;
             if (type === 'error') {
-                toast.style.borderColor = 'rgba(239, 68, 68, 0.4)';
-                toast.style.background = 'rgba(20, 10, 15, 0.95)';
+                toast.style.borderColor = 'var(--danger)';
+                toast.style.backgroundColor = '#fffdfd';
             } else if (type === 'success') {
-                toast.style.borderColor = 'rgba(16, 185, 129, 0.4)';
-                toast.style.background = 'rgba(10, 20, 15, 0.95)';
+                toast.style.borderColor = 'var(--success)';
+                toast.style.backgroundColor = '#fdfdfc';
             } else {
-                toast.style.borderColor = 'rgba(255, 255, 255, 0.15)';
-                toast.style.background = 'rgba(15, 23, 42, 0.95)';
+                toast.style.borderColor = 'var(--border-light)';
+                toast.style.backgroundColor = '#ffffff';
             }
             toast.style.display = 'block';
             toast.style.opacity = '1';
@@ -716,24 +701,24 @@
             }
         }
 
-        // 預設內置高質感 SVG 識別證底圖 (避免空白)
+        // 優雅清爽大地色系預設識別證底圖
         function loadDefaultSvgBackground() {
             const svgContent = `
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 856 540" width="100%" height="100%">
                 <defs>
                     <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stop-color="#1e293b"/>
-                        <stop offset="100%" stop-color="#0f172a"/>
+                        <stop offset="0%" stop-color="#f5efe6"/>
+                        <stop offset="100%" stop-color="#e8e2d5"/>
                     </linearGradient>
                 </defs>
-                <rect width="856" height="540" fill="url(#g)" rx="15"/>
-                <circle cx="800" cy="100" r="150" fill="#3182ce" opacity="0.15"/>
-                <circle cx="50" cy="480" r="100" fill="#4f46e5" opacity="0.1"/>
-                <rect x="30" y="30" width="12" height="120" rx="6" fill="#6366f1"/>
-                <rect x="52" y="30" width="12" height="70" rx="6" fill="#f97316"/>
-                <text x="80" y="70" font-family="sans-serif" font-size="28" font-weight="bold" fill="#ffffff">STAFF PASS</text>
-                <text x="80" y="100" font-family="sans-serif" font-size="14" fill="#94a3b8" letter-spacing="2">IDENTIFICATION CARD</text>
-                <line x1="30" y1="510" x2="826" y2="510" stroke="#334155" stroke-width="2"/>
+                <rect width="856" height="540" fill="url(#g)" rx="12"/>
+                <circle cx="800" cy="100" r="140" fill="#7d8f76" opacity="0.12"/>
+                <circle cx="80" cy="460" r="100" fill="#d48c70" opacity="0.1"/>
+                <rect x="35" y="40" width="8" height="110" rx="4" fill="#7d8f76"/>
+                <rect x="50" y="40" width="8" height="70" rx="4" fill="#d48c70"/>
+                <text x="75" y="75" font-family="sans-serif" font-size="28" font-weight="900" fill="#3d423e" letter-spacing="1">STAFF PASS</text>
+                <text x="75" y="105" font-family="sans-serif" font-size="12" font-weight="700" fill="#8a928c" letter-spacing="2.5">IDENTIFICATION CARD</text>
+                <line x1="35" y1="500" x2="821" y2="500" stroke="#dfd7cb" stroke-width="1.5"/>
             </svg>`;
             currentBgUrl = 'data:image/svg+xml;utf8,' + encodeURIComponent(svgContent);
             document.documentElement.style.setProperty('--card-width', `${cardWidthMm}mm`);
@@ -931,9 +916,9 @@
             // 自動重設為預設底圖並調整 2x2 等比比例
             loadDefaultSvgBackground();
             fieldsConfig = [
-                { key: '姓名', top: 35, left: 15, width: 70, height: 12, fontFamily: "'Microsoft JhengHei', sans-serif", fontSize: '26px', fontWeight: 'bold', letterSpacing: '2px', lineHeight: '1.2', color: '#ffffff', justifyContent: 'center' },
-                { key: '部門', top: 55, left: 15, width: 70, height: 10, fontFamily: "'Microsoft JhengHei', sans-serif", fontSize: '16px', fontWeight: 'normal', letterSpacing: '1px', lineHeight: '1.2', color: '#cbd5e1', justifyContent: 'center' },
-                { key: '員工編號', top: 76, left: 20, width: 60, height: 8, fontFamily: "'Microsoft JhengHei', sans-serif", fontSize: '13px', fontWeight: 'normal', letterSpacing: '0px', lineHeight: '1.2', color: '#94a3b8', justifyContent: 'center' }
+                { key: '姓名', top: 35, left: 15, width: 70, height: 12, fontFamily: "'Microsoft JhengHei', sans-serif", fontSize: '26px', fontWeight: 'bold', letterSpacing: '2px', lineHeight: '1.2', color: '#3d423e', justifyContent: 'center' },
+                { key: '部門', top: 55, left: 15, width: 70, height: 10, fontFamily: "'Microsoft JhengHei', sans-serif", fontSize: '16px', fontWeight: 'normal', letterSpacing: '1px', lineHeight: '1.2', color: '#7a827c', justifyContent: 'center' },
+                { key: '員工編號', top: 76, left: 20, width: 60, height: 8, fontFamily: "'Microsoft JhengHei', sans-serif", fontSize: '13px', fontWeight: 'normal', letterSpacing: '0px', lineHeight: '1.2', color: '#8a928c', justifyContent: 'center' }
             ];
             rawData = [
                 {'姓名': '陳小明', '部門': '行銷企劃處', '員工編號': 'MKT-01'},
@@ -1018,7 +1003,7 @@
                 key: key, top: 20, left: 15, width: 70, height: 12,
                 fontFamily: "'Microsoft JhengHei', sans-serif", fontSize: '18px', 
                 fontWeight: 'normal', letterSpacing: '0px', lineHeight: '1.2',
-                color: '#ffffff', justifyContent: 'center'
+                color: '#3d423e', justifyContent: 'center'
             });
             if(!forcedKey) keyInput.value = '';
             
@@ -1048,7 +1033,7 @@
                 document.getElementById('font-weight').value = cfg.fontWeight || 'normal';
                 document.getElementById('letter-spacing').value = parseInt(cfg.letterSpacing) || 0;
                 document.getElementById('line-height').value = cfg.lineHeight || 1.2;
-                document.getElementById('font-color').value = cfg.color || '#ffffff';
+                document.getElementById('font-color').value = cfg.color || '#3d423e';
                 document.getElementById('text-align').value = cfg.justifyContent || 'center';
             }
         }
