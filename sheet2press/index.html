@@ -479,7 +479,7 @@
                     <span>Step 1. 輸入 Gemini Key</span>
                     <span class="step-badge">1</span>
                 </div>
-                <input type="password" id="gemini-key" placeholder="貼上 API Key" oninput="validateSteps()">
+                <input type="password" id="gemini-key" placeholder="貼上金鑰（若在預覽中則免填）" oninput="validateSteps()">
                 <div style="text-align: right; margin-top: 5px;">
                     <span class="step-status" id="status-1">未設定</span>
                 </div>
@@ -623,6 +623,9 @@
     <div id="toast"></div>
 
     <script>
+        // Gemini API 專用全域金鑰變數。Preview 執行環境將在執行時自動為此欄注入可用金鑰。
+        const apiKey = ""; 
+
         let currentBgUrl = ''; 
         let rawData = [];      
         let fieldsConfig = []; 
@@ -698,14 +701,15 @@
         }
 
         function validateSteps() {
-            const key = document.getElementById('gemini-key').value.trim();
+            const inputKey = document.getElementById('gemini-key').value.trim();
+            const activeKey = inputKey || apiKey;
             const sheetUrl = document.getElementById('sheet-url').value.trim();
 
             const card1 = document.getElementById('card-step-1');
             const status1 = document.getElementById('status-1');
-            if (key) {
+            if (activeKey) {
                 card1.classList.add('completed');
-                status1.innerText = '已設定 ✓';
+                status1.innerText = inputKey ? '已手動設定 ✓' : '已自動配置 ✓';
             } else {
                 card1.classList.remove('completed');
                 status1.innerText = '未設定';
@@ -856,15 +860,39 @@
             return { headers, data };
         }
 
+        // 呼叫 Gemini 專用退避重試函式 (不 log 重試過程，遇到 429 或網路中斷自動延遲再試)
+        async function fetchGeminiWithRetry(activeKey, payload) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${activeKey}`;
+            let delay = 1000;
+            let lastError = null;
+
+            for (let i = 0; i < 5; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (response.ok) {
+                        return await response.json();
+                    }
+                    lastError = new Error(`API 錯誤代碼: ${response.status}`);
+                } catch (err) {
+                    lastError = err;
+                }
+                if (i < 4) {
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                }
+            }
+            throw lastError || new Error("請求失敗");
+        }
+
         // Step 5 智慧一鍵執行核心
         async function runSmartLayout() {
-            const key = document.getElementById('gemini-key').value.trim();
-            const sheetUrl = document.getElementById('sheet-url').value.trim();
+            const inputKey = document.getElementById('gemini-key').value.trim();
+            const activeKey = inputKey || apiKey; // 若沒輸入金鑰，自動調用環境金鑰
 
-            if (!key) {
-                showToast('請先輸入 Step 1. Gemini API 金鑰！', 'error');
-                return;
-            }
             if (!finishedDesignBase64) {
                 showToast('請先上傳 Step 2. 完稿圖以供 AI 視覺分析定位！', 'error');
                 return;
@@ -874,10 +902,6 @@
                 return;
             }
 
-            try {
-                localStorage.setItem('saved_gemini_key', key);
-            } catch(e) {}
-
             const aiStatus = document.getElementById('ai-status');
             const diagnosticBox = document.getElementById('diagnostic-log');
             
@@ -886,6 +910,7 @@
             diagnosticBox.innerHTML = `<div class="log-line info">✦ [排版引擎啟動] 正在初始化多頁面 2x2 排版組態...</div>`;
 
             let csvHeaders = ['姓名', '部門', '員工編號']; 
+            const sheetUrl = document.getElementById('sheet-url').value.trim();
 
             // 1. 同步 Google Sheets CSV 資料
             if (sheetUrl) {
@@ -912,7 +937,7 @@
                 csvHeaders = Object.keys(rawData[0]);
             }
 
-            // 2. 進行 Gemini 完稿圖分析與字型/色彩還原 (使用規定的 gemini-2.5-flash-preview-09-2025 模型)
+            // 2. 進行 Gemini 完稿圖分析與字型/色彩還原
             diagnosticBox.innerHTML += `<div class="log-line info">✦ [AI 分析中] 傳送完稿圖至 Gemini API，比對 [${csvHeaders.join(', ')}] 欄位位置...</div>`;
             try {
                 const csvHeadersString = csvHeaders.join(', ');
@@ -924,22 +949,17 @@
                 請直接以 JSON 陣列格式回傳，絕對不要包含任何 Markdown 標記（如 \`\`\`json 或 \`\`\`）。回傳格式範例：
                 [{"key":"姓名","top":38,"left":15,"width":70,"height":12,"fontSize":"26px","fontWeight":"bold","letterSpacing":"1px","lineHeight":"1.2","color":"#3d423e","justifyContent":"center"}]`;
 
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${key}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [
-                                { text: prompt },
-                                { inlineData: { mimeType: finishedDesignMime, data: finishedDesignBase64 } }
-                            ]
-                        }]
-                    })
-                });
+                const payload = {
+                    contents: [{
+                        role: "user",
+                        parts: [
+                            { text: prompt },
+                            { inlineData: { mimeType: finishedDesignMime, data: finishedDesignBase64 } }
+                        ]
+                    }]
+                };
 
-                if (!response.ok) throw new Error('API 請求失敗。請確認 Gemini 金鑰是否正確有效。');
-
-                const result = await response.json();
+                const result = await fetchGeminiWithRetry(activeKey, payload);
                 let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (!text) throw new Error('AI 解析結果為空。');
 
@@ -970,7 +990,6 @@
                         diagnosticBox.innerHTML += `<div class="log-line log-sub">✦ 欄位 <b>[${f.key}]</b> -> 座標: (${f.top}%, ${f.left}%) | 還原配色: <span style="color:${f.color}; font-weight:bold;">${f.color}</span> | 大小: ${f.fontSize}</div>`;
                     });
 
-                    // 智慧自適應與核對修正報告
                     diagnosticBox.innerHTML += `<div class="log-line success">✓ [AI 核對模組] 自主檢查 CSV 名單與生成的 ${rawData.length} 張識別證字串：對位完全正確，字元無溢出，允許輸出！</div>`;
                     showToast('AI 排版與資料核對完全成功！', 'success');
                 } else {
@@ -978,12 +997,20 @@
                 }
             } catch (err) {
                 console.error(err);
-                diagnosticBox.innerHTML += `<div class="log-line error">✗ [AI 解析錯誤] 無法順利讀取完稿圖字體與樣式，錯誤：${err.message}。</div>`;
-                showToast('AI 視覺分析對位失敗，已使用默認佈局，請查看日誌說明。', 'error');
+                diagnosticBox.innerHTML += `<div class="log-line error">✗ [AI 解析錯誤] 無法順利讀取完稿圖字體與樣式，錯誤原因：${err.message}。已經為您自動啟用預設排版樣式。</div>`;
+                showToast('視覺排版分析失敗，已自動幫您調用本機優雅底稿，請見下方日誌面板。', 'error');
+                
+                // fallback 一組好看的預設樣式避免畫面空白
+                fieldsConfig = [
+                    { key: '姓名', top: 35, left: 15, width: 70, height: 12, fontFamily: "'Microsoft JhengHei', sans-serif", fontSize: '26px', fontWeight: 'bold', letterSpacing: '2px', lineHeight: '1.2', color: '#3d423e', justifyContent: 'center' },
+                    { key: '部門', top: 55, left: 15, width: 70, height: 10, fontFamily: "'Microsoft JhengHei', sans-serif", fontSize: '16px', fontWeight: 'normal', letterSpacing: '1px', lineHeight: '1.2', color: '#7a827c', justifyContent: 'center' },
+                    { key: '員工編號', top: 76, left: 20, width: 60, height: 8, fontFamily: "'Microsoft JhengHei', sans-serif", fontSize: '13px', fontWeight: 'normal', letterSpacing: '0px', lineHeight: '1.2', color: '#8a928c', justifyContent: 'center' }
+                ];
             }
 
             aiStatus.innerText = '';
             renderPages();
+            validateSteps();
         }
 
         // 本機預設 4 筆示範名單
@@ -1145,7 +1172,6 @@
             if (rawData.length > 0) {
                 dataList = rawData;
             } else {
-                // 如果沒有導入數據，則生成 4 張帶有欄位標頭字串的卡片，供前端美觀预览
                 let dummyRow = {};
                 fieldsConfig.forEach(f => dummyRow[f.key] = `[${f.key}]`);
                 dataList = Array(4).fill(dummyRow).map((row, idx) => {
