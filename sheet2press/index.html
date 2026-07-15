@@ -58,6 +58,27 @@
             gap: 10px;
         }
 
+        /* 版本號標籤樣式 */
+        .version-tag {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            font-size: 11px;
+            background-color: var(--badge-bg);
+            border: 1px solid var(--border-light);
+            color: var(--text-sub);
+            padding: 5px 10px;
+            border-radius: 100px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            pointer-events: none; /* 避免點擊干擾 */
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
         /* 步驟式網格布局 */
         .steps-grid {
             display: grid;
@@ -445,6 +466,7 @@
         /* 列印樣式設定 */
         @media print {
             #control-panel { display: none !important; }
+            .version-tag { display: none !important; }
             body { background: none !important; }
             .preview-container { padding: 0 !important; }
             .text-layer { border: none !important; background: none !important; padding-right: 2px !important; }
@@ -469,6 +491,13 @@
     <!-- 控制面板 -->
     <div id="control-panel">
         <h2>🌿 2x2 智慧無縫識別證批量系統</h2>
+        
+        <!-- 右上角版本號與日期時間標示 -->
+        <div class="version-tag">
+            <span>v2.5.0</span>
+            <span style="color: var(--border-light); font-weight: normal;">|</span>
+            <span>2026-07-15 15:33</span>
+        </div>
         
         <div class="steps-grid">
             <!-- Step 1 (自適應防密碼管理員亂填) -->
