@@ -3,337 +3,270 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>專業排版編輯器 - 2x2 智慧無縫識別證批量系統</title>
+    <title>專業識別證排版編輯器 - 2x2 智慧批量系統</title>
     <!-- 載入 Google Fonts 精選高質感中英文字型 -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Noto+Serif+TC:wght@400;700;900&family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=Mochiy+Pop+One&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@400;700&family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=Mochiy+Pop+One&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #7d8f76; /* 鼠尾草綠 Sage Green */
-            --primary-hover: #677860;
-            --success: #8fa89b; /* 草木綠 Herbal Green */
-            --success-hover: #7b9487;
-            --warning: #d48c70; /* 暖泥陶土橘 Terracotta */
-            --warning-hover: #c1785c;
-            --danger: #db7c75; /* 珊瑚粉 Dusty Coral */
-            --danger-hover: #c5655d;
-            --bg-light: #faf8f5; /* 燕麥白 Oatmeal Cream */
-            --panel-bg: #ffffff; /* 純淨暖白 */
-            --border-light: #e6dfd5; /* 溫和暖灰線條 */
-            --border-hover: #cbd5e1;
-            --text-main: #3d423e; /* 暖炭黑 Warm Charcoal */
-            --text-sub: #8a928c; /* 霧霾灰綠 Muted Grey-green */
-            --badge-bg: #f3eee7; /* 燕麥米色 */
+            --primary: #5c6e58; /* 優雅深鼠尾草綠 Sage Green */
+            --primary-hover: #485745;
+            --success: #6e8e7c; /* 溫和草木綠 */
+            --success-hover: #5a7566;
+            --warning: #cc7d5c; /* 暖陶土橘 */
+            --warning-hover: #b26848;
+            --danger: #d46b63; /* 珊瑚紅 */
+            --bg-workspace: #f6f5f1; /* 溫潤暖灰工作區背景 */
+            --sidebar-bg: #ffffff; /* 純白側邊欄 */
+            --border-color: #eae4db; /* 細緻暖灰邊框 */
+            --text-main: #2b2e2c; /* 深炭灰 */
+            --text-sub: #7a827c; /* 輕霧綠灰 */
+            --active-bg: #f5f2eb; /* 激活項目背景 */
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Microsoft JhengHei", sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
             margin: 0;
             padding: 0;
-            background-color: var(--bg-light);
-            background-image: 
-                radial-gradient(#e5dfd3 1px, transparent 1px);
-            background-size: 20px 20px;
-            user-select: none;
+            background-color: var(--bg-workspace);
             color: var(--text-main);
-            min-height: 100vh;
+            overflow: hidden;
+            display: flex;
+            height: 100vh;
         }
 
-        /* 頂部引導控制面板 */
-        #control-panel {
-            background-color: var(--panel-bg);
-            padding: 24px;
-            box-shadow: 0 4px 15px rgba(142, 136, 122, 0.08);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            border-bottom: 1px solid var(--border-light);
+        /* SaaS 雙欄佈局：左側控制面板 */
+        #sidebar {
+            width: 360px;
+            min-width: 360px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            z-index: 100;
+            box-shadow: 4px 0 20px rgba(115, 102, 92, 0.03);
+            overflow-y: auto;
         }
 
-        h2 {
-            margin: 0 0 20px 0;
-            font-size: 20px;
+        /* 側邊欄頂部 Logo 區 */
+        .sidebar-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .sidebar-header h1 {
+            margin: 0;
+            font-size: 16px;
             font-weight: 800;
             letter-spacing: 0.5px;
             color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .sidebar-version {
+            font-size: 10px;
+            background: var(--active-bg);
+            padding: 3px 8px;
+            border-radius: 100px;
+            font-family: monospace;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* 側邊欄摺疊卡片 */
+        .sidebar-section {
+            border-bottom: 1px solid var(--border-color);
+        }
+        .section-trigger {
+            width: 100%;
+            padding: 16px 24px;
+            background: none;
+            border: none;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        .section-trigger:hover {
+            background-color: rgba(92, 110, 88, 0.02);
+        }
+        .section-content {
+            padding: 0 24px 20px 24px;
+            display: block; /* 預設展開，靠優雅排版維持美觀 */
+        }
+
+        /* 表單與控制項細節優化 */
+        label.item-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-sub);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .input-text {
+            width: 100%;
+            padding: 10px 12px;
+            background: #fafaf9;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 12px;
+            color: var(--text-main);
+            box-sizing: border-box;
+            transition: all 0.2s ease;
+        }
+        .input-text:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(92, 110, 88, 0.08);
+        }
+        
+        /* 自訂現代化上傳按鈕 */
+        .modern-upload {
+            display: block;
+            background: #FAF9F6;
+            border: 1px dashed var(--border-color);
+            padding: 12px;
+            text-align: center;
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-main);
+            transition: all 0.2s ease;
+        }
+        .modern-upload:hover {
+            border-color: var(--primary);
+            background: var(--active-bg);
+            color: var(--primary);
+        }
+        
+        /* 側邊欄縮圖預覽 */
+        .sidebar-thumb-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 10px;
+        }
+        .sidebar-thumbnail {
+            width: 55px;
+            height: 38px;
+            object-fit: contain;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: #fff;
+            display: none;
+        }
+        .thumb-info {
+            font-size: 11px;
+            color: var(--text-sub);
+            font-weight: 500;
+        }
+
+        /* 儲存槽專案卡片 */
+        .save-slot-wrapper {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        /* 主要右側主工作區 */
+        #workspace {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 頂部懸浮工具列 (Editor Toolbar) */
+        #toolbar {
+            background-color: #ffffff;
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 28px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.01);
+            z-index: 90;
+        }
+        .toolbar-group {
             display: flex;
             align-items: center;
             gap: 10px;
         }
-
-        /* 版本號標籤樣式 */
-        .version-tag {
-            position: absolute;
-            top: 24px;
-            right: 24px;
-            font-size: 11px;
-            background-color: var(--badge-bg);
-            border: 1px solid var(--border-light);
-            color: var(--text-sub);
-            padding: 5px 10px;
-            border-radius: 100px;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            font-weight: 700;
-            letter-spacing: 0.3px;
-            pointer-events: none; /* 避免點擊干擾 */
-            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-            display: flex;
-            gap: 6px;
-            align-items: center;
+        .toolbar-divider {
+            width: 1px;
+            height: 24px;
+            background-color: var(--border-color);
+            margin: 0 4px;
         }
-
-        /* 步驟式網格布局 - 升級 6 欄以容納存檔功能 */
-        .steps-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 16px;
-            margin-bottom: 20px;
-        }
-
-        .step-card {
-            background: #fdfdfd;
-            border: 1px solid var(--border-light);
-            border-radius: 10px;
-            padding: 16px;
-            position: relative;
-            transition: all 0.25s ease;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-        .step-card:hover {
-            border-color: var(--primary);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(125, 143, 118, 0.08);
-        }
-        .step-card.completed {
-            border-color: var(--success);
-            background-color: rgba(143, 168, 155, 0.04);
-        }
-        .step-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            font-weight: 700;
-            font-size: 13px;
-            color: var(--text-main);
-            letter-spacing: 0.3px;
-        }
-        .step-badge {
-            background: var(--badge-bg);
-            color: var(--text-main);
-            border-radius: 50%;
-            width: 22px;
-            height: 22px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 11px;
-            font-weight: 800;
-            border: 1px solid var(--border-light);
-        }
-        .step-card.completed .step-badge {
-            background: var(--success);
-            color: white;
-            border-color: var(--success);
-        }
-        .step-status {
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--text-sub);
-            word-break: break-all;
-        }
-        .step-card.completed .step-status {
-            color: var(--success);
-        }
-
-        /* 輸入與上傳按鍵樣式 */
-        .step-card input[type="text"] {
-            width: 100%;
-            padding: 9px 12px;
-            background: #fcfbfa;
-            border: 1px solid var(--border-light);
+        
+        /* 下拉與微調按鈕 */
+        .select-modern, .input-number-modern {
+            padding: 8px 12px;
+            background: #fafaf9;
+            border: 1px solid var(--border-color);
             border-radius: 6px;
             font-size: 12px;
             color: var(--text-main);
-            box-sizing: border-box;
-            margin-top: 5px;
-            transition: all 0.2s ease;
-        }
-        .step-card input[type="text"]:focus {
-            outline: none;
-            border-color: var(--primary);
-            background: #ffffff;
-        }
-        .file-upload-label {
-            display: block;
-            background: #faf8f5;
-            border: 1px dashed var(--border-light);
-            padding: 10px;
-            text-align: center;
-            border-radius: 6px;
-            font-size: 11px;
-            cursor: pointer;
-            margin-top: 5px;
-            font-weight: 700;
-            color: var(--text-sub);
-            transition: all 0.2s ease;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .file-upload-label:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-            background: rgba(125, 143, 118, 0.05);
-        }
-        .thumbnail-preview {
-            width: 50px;
-            height: 35px;
-            object-fit: contain;
-            border: 1px solid var(--border-light);
-            border-radius: 4px;
-            display: none;
-            margin: 8px auto 0 auto;
-            background: #fff;
-        }
-
-        /* 橫向排版屬性工具列 */
-        .editor-tools {
-            background: #fdfdfd;
-            border: 1px solid var(--border-light);
-            padding: 12px 20px;
-            border-radius: 10px;
-            display: flex;
-            gap: 16px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .tool-item {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            font-size: 11px;
-        }
-        .tool-item label {
-            font-weight: 700;
-            color: var(--text-sub);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .tool-item select, .tool-item input {
-            padding: 7px 10px;
-            background: #faf8f5;
-            border: 1px solid var(--border-light);
-            border-radius: 6px;
-            font-size: 12px;
-            color: var(--text-main);
+            font-weight: 600;
             outline: none;
             transition: all 0.2s ease;
         }
-        .tool-item select:focus, .tool-item input:focus {
+        .select-modern:focus, .input-number-modern:focus {
             border-color: var(--primary);
             background: #ffffff;
         }
 
-        /* 功能按鈕 */
-        .btn {
-            padding: 10px 18px;
-            border-radius: 6px;
-            font-weight: 700;
-            cursor: pointer;
-            font-size: 12px;
-            border: none;
+        /* 提示訊息與標誌 */
+        .tips-badge {
+            font-size: 11px;
+            color: var(--text-sub);
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 6px;
-            transition: all 0.2s ease;
-        }
-        .btn-primary { 
-            background: var(--primary); 
-            color: white; 
-        }
-        .btn-primary:hover { 
-            background: var(--primary-hover); 
-        }
-        .btn-success { 
-            background: var(--success); 
-            color: white; 
-        }
-        .btn-success:hover { 
-            background: var(--success-hover); 
-        }
-        .btn-trigger { 
-            background: var(--warning); 
-            color: white; 
-            width: 100%; 
-            margin-top: 5px; 
-        }
-        .btn-trigger:hover { 
-            background: var(--warning-hover); 
-        }
-        .btn-demo { 
-            background: #faf8f5; 
-            color: var(--text-main); 
-            padding: 6px 12px; 
-            font-size: 11px; 
-            margin-top: 5px; 
-            border: 1px solid var(--border-light);
-        }
-        .btn-demo:hover { 
-            background: var(--badge-bg);
-            border-color: var(--border-hover);
+            gap: 4px;
+            font-weight: 500;
         }
 
-        /* AI 診斷日誌面板 */
-        #diagnostic-log {
-            background-color: #f7f5f0;
-            border: 1px solid #e2dbd0;
-            border-radius: 8px;
-            padding: 12px;
-            margin-top: 15px;
-            font-family: monospace, sans-serif;
-            font-size: 11px;
-            color: #5d635f;
-            max-height: 200px;
-            overflow-y: auto;
-            display: none;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        .log-line {
-            margin-bottom: 4px;
-            line-height: 1.4;
-        }
-        .log-line.info { color: #7d8f76; }
-        .log-line.success { color: #588065; font-weight: bold; }
-        .log-line.error { color: #db7c75; font-weight: bold; }
-        .log-sub { padding-left: 12px; color: #8a928c; }
-
-        /* 預覽 A4 畫布區 */
+        /* 預覽畫布工作區背景與點陣底紋 */
         .preview-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 40px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 30px 0 60px 0;
-            overflow: auto;
-            width: 100%;
+            background-color: var(--bg-workspace);
+            background-image: radial-gradient(circle, #e2dbcf 1.2px, transparent 1.2px);
+            background-size: 24px 24px;
         }
 
         .page-wrapper {
             display: flex;
             justify-content: center;
             width: 100%;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
             transition: height 0.2s ease;
         }
 
+        /* A4 紙張本體 */
         .a4-page {
             width: 210mm; 
             height: 297mm;
             background-color: #ffffff;
-            box-shadow: 0 4px 25px rgba(115, 102, 92, 0.08);
+            box-shadow: 0 10px 40px rgba(115, 102, 92, 0.08);
             box-sizing: border-box;
             padding: 15mm; 
             display: grid;
@@ -345,7 +278,7 @@
             position: relative;
             page-break-after: always;
             transition: transform 0.2s ease;
-            border: 1px solid var(--border-light);
+            border: 1px solid #dcd3c5;
         }
 
         /* 識別證卡片本體 */
@@ -356,15 +289,15 @@
             background-position: center;
             background-repeat: no-repeat;
             overflow: hidden;
-            background-color: #faf9f6; 
-            border: 1px dashed #e2dbd0; 
+            background-color: #fcfbfa; 
+            border: 1px dashed #eae2d5; 
             width: 100%;
             height: 100%;
         }
 
         /* 裁切虛線樣式 */
         .has-crop-lines .id-card {
-            outline: 1px dashed #d5cebf; 
+            outline: 1px dashed #c0b6a3; 
             outline-offset: -1px;
         }
 
@@ -372,50 +305,64 @@
         .text-layer {
             position: absolute;
             cursor: move;
-            border: 1px dashed var(--warning); 
+            border: 1px dashed transparent; 
             box-sizing: border-box;
             padding: 0px; 
             display: flex;
             align-items: center;
             overflow: visible; 
-            background: rgba(212, 140, 112, 0.04);
+            user-select: none;
+            transition: border-color 0.15s ease;
+        }
+        .text-layer:hover {
+            border-color: rgba(92, 110, 88, 0.4);
         }
         .text-layer.selected {
             border: 1.5px dashed var(--primary) !important;
-            background-color: rgba(125, 143, 118, 0.08);
+            background-color: rgba(92, 110, 88, 0.04);
         }
 
-        /* 畫布可編輯文字框 - 游標與選取保護 */
+        /* 畫布內建文字編輯框 - 平時不穿透/雙擊後轉為 text */
         .text-content-editable {
-            cursor: text;
-            user-select: text; /* 允許文字框選與編輯 */
+            cursor: move; /* 未選中前，鼠標依然顯示移動以方便識別選取 */
             width: 100%;
             height: 100%;
             display: flex;
             align-items: center;
             outline: none;
             box-sizing: border-box;
-            padding: 1px 4px;
+            padding: 0px 4px;
+            pointer-events: none; /* 核心修正：平時完全穿透，讓父容器 .text-layer 精確捕捉選取與拖曳 */
+            white-space: nowrap;
+        }
+        .text-layer.selected .text-content-editable {
+            cursor: pointer;
+            pointer-events: auto; /* 選中後開放點擊以進行雙擊改字 */
+        }
+        /* 當真正處於 contenteditable 狀態時 */
+        .text-content-editable[contenteditable="true"] {
+            cursor: text !important;
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(92, 110, 88, 0.15);
+            border-radius: 3px;
+            color: #000000 !important;
         }
         
-        /* 縮放點 */
+        /* 縮放與刪除小控制件 - 平時隱藏，只在選取時優雅浮現 */
         .resize-handle {
             width: 8px; height: 8px;
             background-color: var(--primary);
-            position: absolute; right: 0; bottom: 0;
+            position: absolute; right: -4px; bottom: -4px;
             cursor: se-resize;
             border-radius: 50%;
             z-index: 10;
             border: 1.5px solid white;
+            display: none;
         }
-
-        /* 刪除按鈕 */
         .delete-btn {
             position: absolute;
-            top: -8px;
-            right: -8px;
-            width: 16px;
-            height: 16px;
+            top: -8px; right: -8px;
+            width: 16px; height: 16px;
             background-color: var(--danger);
             color: white;
             border-radius: 50%;
@@ -425,52 +372,98 @@
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
             z-index: 11;
+            display: none;
+        }
+        .text-layer.selected .resize-handle,
+        .text-layer.selected .delete-btn {
+            display: flex !important;
+        }
+
+        /* 功能按鈕樣式 */
+        .btn {
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 12px;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
             transition: all 0.2s ease;
         }
-        .delete-btn:hover { 
-            background-color: var(--danger-hover);
-            transform: scale(1.1);
+        .btn-primary { 
+            background: var(--primary); 
+            color: white; 
+        }
+        .btn-primary:hover { 
+            background: var(--primary-hover); 
+            box-shadow: 0 4px 12px rgba(92, 110, 88, 0.15);
+        }
+        .btn-success { 
+            background: var(--success); 
+            color: white; 
+        }
+        .btn-success:hover { 
+            background: var(--success-hover); 
+        }
+        .btn-danger { 
+            background: var(--danger); 
+            color: white; 
+        }
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+        .btn-warning:hover {
+            background: var(--warning-hover);
+        }
+        .btn-demo { 
+            background: var(--active-bg); 
+            color: var(--text-main); 
+            border: 1px solid var(--border-color);
+        }
+        .btn-demo:hover { 
+            background: #eae4db;
         }
 
-        #ai-status { color: var(--primary); font-weight: bold; font-size: 12px; margin-left: 10px; }
-
-        /* Zoom Slider Custom styling */
-        input[type="range"] {
-            -webkit-appearance: none;
-            appearance: none;
-            background: var(--border-light);
-            border-radius: 4px;
-            height: 5px;
-            outline: none;
+        /* 診斷日誌 Drawer 側邊拉門 */
+        #diagnostic-log {
+            background-color: #2b2e2c;
+            border-top: 1px solid #3d423e;
+            padding: 16px 24px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 11px;
+            color: #b3bab4;
+            max-height: 150px;
+            overflow-y: auto;
+            display: none;
+            box-sizing: border-box;
+            border-bottom: 4px solid var(--primary);
         }
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: var(--primary);
-            cursor: pointer;
-            transition: transform 0.15s ease;
+        .log-line {
+            margin-bottom: 5px;
+            line-height: 1.5;
         }
-        input[type="range"]::-webkit-slider-thumb:hover {
-            transform: scale(1.2);
-        }
+        .log-line.info { color: #8fa89b; }
+        .log-line.success { color: #a9dfbf; font-weight: bold; }
+        .log-line.error { color: #db7c75; font-weight: bold; }
+        .log-sub { padding-left: 12px; color: #8a928c; }
 
         /* Toast 提示框 */
         #toast {
             position: fixed;
-            bottom: 35px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--panel-bg);
-            border: 1.5px solid var(--border-light);
+            bottom: 40px;
+            right: 40px;
+            background: #ffffff;
+            border-left: 4px solid var(--primary);
             color: var(--text-main);
-            padding: 12px 28px;
+            padding: 16px 28px;
             border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(115, 102, 92, 0.12);
+            box-shadow: 0 10px 30px rgba(115, 102, 92, 0.15);
             display: none;
             z-index: 9999;
             font-size: 13px;
@@ -479,12 +472,11 @@
             transition: opacity 0.3s ease, transform 0.3s ease;
         }
 
-        /* 列印樣式設定 */
+        /* 印表機友好樣式 */
         @media print {
-            #control-panel { display: none !important; }
-            .version-tag { display: none !important; }
+            #sidebar, #toolbar { display: none !important; }
             body { background: none !important; }
-            .preview-container { padding: 0 !important; }
+            .preview-container { padding: 0 !important; background: none !important; }
             .text-layer { border: none !important; background: none !important; }
             .resize-handle, .delete-btn { display: none !important; }
             .page-wrapper { margin: 0 !important; height: auto !important; }
@@ -504,214 +496,190 @@
 </head>
 <body>
 
-    <!-- 控制面板 -->
-    <div id="control-panel">
-        <h2>🌿 2x2 智慧無縫識別證批量系統</h2>
-        
-        <!-- 右上角版本號與日期時間標示 -->
-        <div class="version-tag">
-            <span>v0.3.0</span>
-            <span style="color: var(--border-light); font-weight: normal;">|</span>
-            <span>2026-07-15 17:55</span>
+    <!-- 左側智慧控制面板 -->
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <h1>🌿 StaffCard Studio</h1>
+            <div class="sidebar-version">v0.3.1</div>
         </div>
-        
-        <div class="steps-grid">
-            <!-- Step 1 -->
-            <div class="step-card" id="card-step-1">
-                <div class="step-header">
-                    <span>Step 1. 運行金鑰</span>
-                    <span class="step-badge">1</span>
-                </div>
-                <input type="text" id="gemini-key" placeholder="貼上您的 Gemini API Key" autocomplete="new-password" oninput="validateSteps()">
-                <div style="text-align: right; margin-top: 5px;">
-                    <span class="step-status" id="status-1">偵測中...</span>
-                </div>
-            </div>
 
-            <!-- Step 2 -->
-            <div class="step-card" id="card-step-2">
-                <div class="step-header">
-                    <span>Step 2. 完稿圖分析</span>
-                    <span class="step-badge">2</span>
-                </div>
-                <label for="upload-template" class="file-upload-label" id="label-template">選擇含範例文字圖</label>
-                <input type="file" id="upload-template" accept="image/*" style="display: none;" onchange="handleTemplateUpload(this)">
-                <img id="thumb-template" class="thumbnail-preview">
-                <div style="text-align: right; margin-top: 5px;">
-                    <span class="step-status" id="status-2">未上傳</span>
-                </div>
-            </div>
-
-            <!-- Step 3 -->
-            <div class="step-card" id="card-step-3">
-                <div class="step-header">
-                    <span>Step 3. 2x2背景底圖</span>
-                    <span class="step-badge">3</span>
-                </div>
-                <label for="upload-background" class="file-upload-label" id="label-background">選擇純背景底圖</label>
-                <input type="file" id="upload-background" accept="image/*" style="display: none;" onchange="handleBackgroundUpload(this)">
-                <img id="thumb-background" class="thumbnail-preview">
-                <div style="text-align: right; margin-top: 5px;">
-                    <span class="step-status" id="status-3">未上傳</span>
-                </div>
-            </div>
-
-            <!-- Step 4 (含卡片寬度/高度與 CSV 匯入) -->
-            <div class="step-card" id="card-step-4">
-                <div class="step-header">
-                    <span>Step 4. Sheets CSV</span>
-                    <span class="step-badge">4</span>
-                </div>
-                <div style="display: flex; gap: 4px; align-items: center;">
-                    <input type="text" id="sheet-url" style="flex: 1;" placeholder="貼上試算表網址" value="https://docs.google.com/spreadsheets/d/e/2PACX-1vSI3Z00cG9rilOReOrgOB95cCZ-yOOaJRFm_BhLZZj_vQ6lpqDtliW_r9QUVD99xAyUdnE2OEKkH2pf/pub?gid=601505765&single=true&output=csv">
-                    <button class="btn btn-primary" style="padding: 9px 12px; font-size: 11px;" onclick="handleSheetUrlChange()">同步</button>
-                </div>
-                <label for="upload-csv" class="file-upload-label" id="label-csv" style="padding: 6px; font-size: 10px; border-style: dotted; margin-top: 6px;">或載入本機 CSV</label>
-                <input type="file" id="upload-csv" accept=".csv" style="display: none;" onchange="handleCSVUpload(this)">
-                
-                <div style="margin-top: 10px; border-top: 1px dashed var(--border-light); padding-top: 8px;">
-                    <span style="font-size: 10px; font-weight: 700; color: var(--text-main); display: block; margin-bottom: 2px;">📐 列印實體尺寸 (cm)</span>
-                    <div style="display: flex; gap: 6px;">
-                        <div style="flex: 1;">
-                            <input type="number" id="card-width-input" value="8.56" step="0.01" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid var(--border-light); border-radius: 4px;" oninput="updateCardDimensions()">
-                        </div>
-                        <div style="flex: 1;">
-                            <input type="number" id="card-height-input" value="5.40" step="0.01" style="width: 100%; padding: 4px; font-size: 11px; border: 1px solid var(--border-light); border-radius: 4px;" oninput="updateCardDimensions()">
-                        </div>
+        <!-- 摺疊區 1: 專案與運行金鑰 -->
+        <div class="sidebar-section">
+            <div class="section-trigger">🔐 運行金鑰與備份</div>
+            <div class="section-content">
+                <div style="margin-bottom: 12px;">
+                    <label class="item-label">Gemini API Key</label>
+                    <input type="password" id="gemini-key" class="input-text" placeholder="貼上您的 Gemini API Key" autocomplete="new-password" oninput="validateSteps()">
+                    <div style="text-align: right; margin-top: 4px;">
+                        <span id="status-1" style="font-size: 10px; font-weight: 700; color: var(--text-sub);">檢測中...</span>
                     </div>
                 </div>
-                <div style="text-align: right; margin-top: 5px;">
-                    <span class="step-status" id="status-4">已就緒 ✓</span>
-                </div>
-            </div>
 
-            <!-- Step 5 Button Wrapper -->
-            <div class="step-card" style="background: rgba(212, 140, 112, 0.04); border-color: rgba(212, 140, 112, 0.2);">
-                <div class="step-header" style="margin-bottom: 2px;">
-                    <span style="font-weight: 800; color: var(--warning);">Step 5. 智慧排版</span>
-                    <span class="step-badge" style="background: var(--warning); color: white; border-color: var(--warning);">5</span>
-                </div>
-                <button class="btn btn-trigger" onclick="runSmartLayout()">載入資料與 AI 排版</button>
-                <button class="btn btn-demo" onclick="loadLocalDemo()">載入本機預設示範</button>
-            </div>
-
-            <!-- Step 6 (新功能：專案存檔管理) -->
-            <div class="step-card" id="card-step-6" style="background: rgba(125, 143, 118, 0.04);">
-                <div class="step-header">
-                    <span>Step 6. 📁 本地存檔管理</span>
-                    <span class="step-badge" style="background: var(--primary); color: white; border-color: var(--primary);">6</span>
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 6px; justify-content: center; height: 100%;">
-                    <select id="save-slot-select" style="width: 100%; padding: 6px; font-size: 11px; border: 1px solid var(--border-light); border-radius: 6px; background-color: var(--badge-bg); color: var(--text-main); font-weight: bold;">
-                        <option value="1">存檔槽 1 (無紀錄)</option>
-                        <option value="2">存檔槽 2 (無紀錄)</option>
-                        <option value="3">存檔槽 3 (無紀錄)</option>
-                        <option value="4">存檔槽 4 (無紀錄)</option>
-                        <option value="5">存檔槽 5 (無紀錄)</option>
+                <div style="border-top: 1px solid var(--border-color); padding-top: 12px;">
+                    <label class="item-label">💾 5組本機儲存專案槽</label>
+                    <select id="save-slot-select" class="select-modern" style="width: 100%; margin-bottom: 8px;">
+                        <option value="1">專案槽 1 (無紀錄)</option>
+                        <option value="2">專案槽 2 (無紀錄)</option>
+                        <option value="3">專案槽 3 (無紀錄)</option>
+                        <option value="4">專案槽 4 (無紀錄)</option>
+                        <option value="5">專案槽 5 (無紀錄)</option>
                     </select>
-                    <div style="display: flex; gap: 4px;">
-                        <button class="btn btn-primary" style="flex: 1; padding: 6px; font-size: 11px;" onclick="saveProjectSlot()">💾 儲存</button>
-                        <button class="btn btn-success" style="flex: 1; padding: 6px; font-size: 11px;" onclick="loadProjectSlot()">📂 讀取</button>
+                    <div class="save-slot-wrapper">
+                        <button class="btn btn-primary" style="flex: 1; padding: 8px;" onclick="saveProjectSlot()">備份儲存</button>
+                        <button class="btn btn-demo" style="flex: 1; padding: 8px;" onclick="loadProjectSlot()">載入讀取</button>
                     </div>
-                </div>
-                <div style="text-align: right; margin-top: 5px;">
-                    <span class="step-status" id="status-6" style="font-size: 10px;">就緒 ✓</span>
                 </div>
             </div>
         </div>
 
-        <!-- 輔助屬性編輯器工具列 -->
-        <div class="editor-tools">
-            <div class="tool-item">
-                <label>手動增建欄位</label>
-                <div style="display: flex; gap: 4px;">
-                    <input type="text" id="new-field-key" style="width: 85px;" placeholder="欄位名">
-                    <button class="btn btn-primary" style="padding: 4px 10px; border-radius: 6px;" onclick="addNewField('', true)">＋</button>
+        <!-- 摺疊區 2: 圖像完稿與底圖素材 -->
+        <div class="sidebar-section">
+            <div class="section-trigger">🖼️ 完稿定位與背景底圖</div>
+            <div class="section-content">
+                <div style="margin-bottom: 12px;">
+                    <label class="item-label">Step 2. 上傳含文字完稿圖</label>
+                    <label for="upload-template" class="modern-upload" id="label-template">📁 點擊選取完稿對位圖</label>
+                    <input type="file" id="upload-template" accept="image/*" style="display: none;" onchange="handleTemplateUpload(this)">
+                    <div class="sidebar-thumb-container" id="thumb-container-2">
+                        <img id="thumb-template" class="sidebar-thumbnail">
+                        <span class="thumb-info" id="status-2">尚未分析</span>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid var(--border-color); padding-top: 12px;">
+                    <label class="item-label">Step 3. 上傳 A4 純底圖背景</label>
+                    <label for="upload-background" class="modern-upload" id="label-background">📁 點擊選取背景底圖</label>
+                    <input type="file" id="upload-background" accept="image/*" style="display: none;" onchange="handleBackgroundUpload(this)">
+                    <div class="sidebar-thumb-container" id="thumb-container-3">
+                        <img id="thumb-background" class="sidebar-thumbnail">
+                        <span class="thumb-info" id="status-3">預設 SVG 向量背景</span>
+                    </div>
                 </div>
             </div>
+        </div>
 
-            <!-- 智慧個別編輯勾選項目 -->
-            <div class="tool-item" style="border-left: 2px solid var(--warning); padding-left: 12px; flex-direction: row; align-items: center; gap: 6px;">
-                <input type="checkbox" id="individual-edit-toggle" onchange="toggleIndividualEdit()" style="cursor: pointer; width: 16px; height: 16px;">
-                <label for="individual-edit-toggle" style="cursor: pointer; font-weight: 800; color: var(--warning); margin: 0;">✏️ 編輯個別文字設定</label>
+        <!-- 摺疊區 3: 試算表名單與尺寸 -->
+        <div class="sidebar-section" style="flex-grow: 1; border-bottom: none;">
+            <div class="section-trigger">📊 數據名單與 A4 尺寸</div>
+            <div class="section-content">
+                <div style="margin-bottom: 12px;">
+                    <label class="item-label">Step 4. Google Sheets CSV 網址</label>
+                    <div style="display: flex; gap: 6px;">
+                        <input type="text" id="sheet-url" class="input-text" style="flex: 1;" placeholder="貼上發佈的 CSV 連結" value="https://docs.google.com/spreadsheets/d/e/2PACX-1vSI3Z00cG9rilOReOrgOB95cCZ-yOOaJRFm_BhLZZj_vQ6lpqDtliW_r9QUVD99xAyUdnE2OEKkH2pf/pub?gid=601505765&single=true&output=csv">
+                        <button class="btn btn-primary" style="padding: 8px 12px;" onclick="handleSheetUrlChange()">同步</button>
+                    </div>
+                    <label for="upload-csv" class="modern-upload" id="label-csv" style="margin-top: 8px; border-style: dotted; padding: 8px; font-size: 11px;">或載入本機名單 CSV</label>
+                    <input type="file" id="upload-csv" accept=".csv" style="display: none;" onchange="handleCSVUpload(this)">
+                    <div style="text-align: right; margin-top: 4px;">
+                        <span id="status-4" style="font-size: 10px; font-weight: 700; color: var(--success);">已預填示範網址✓</span>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid var(--border-color); padding-top: 12px; margin-bottom: 16px;">
+                    <label class="item-label">📐 卡片實體尺寸 (厘米 cm)</label>
+                    <div style="display: flex; gap: 8px;">
+                        <div style="flex: 1;">
+                            <span style="font-size: 10px; color: var(--text-sub); font-weight: 600;">寬度 (cm)</span>
+                            <input type="number" id="card-width-input" class="input-text" value="8.56" step="0.01" oninput="updateCardDimensions()" style="padding: 6px 10px;">
+                        </div>
+                        <div style="flex: 1;">
+                            <span style="font-size: 10px; color: var(--text-sub); font-weight: 600;">高度 (cm)</span>
+                            <input type="number" id="card-height-input" class="input-text" value="5.40" step="0.01" oninput="updateCardDimensions()" style="padding: 6px 10px;">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid var(--border-color); padding-top: 16px;">
+                    <button class="btn btn-warning" style="width: 100%; margin-bottom: 8px;" onclick="runSmartLayout()">載入名單與 AI 排版定位</button>
+                    <button class="btn btn-demo" style="width: 100%;" onclick="loadLocalDemo()">載入本機示範(快速體驗)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI 校對日誌 Panel (固定在 Sidebar 最底端) -->
+        <div id="diagnostic-log"></div>
+    </div>
+
+    <!-- 右側主要工作與畫布區 -->
+    <div id="workspace">
+        <!-- 頂部精簡控制工具列 -->
+        <div id="toolbar">
+            <div class="toolbar-group">
+                <label style="font-size: 11px; font-weight: 800; color: var(--text-sub);">新增欄位</label>
+                <input type="text" id="new-field-key" class="input-number-modern" style="width: 80px; padding: 6px 10px;" placeholder="職級">
+                <button class="btn btn-primary" style="padding: 6px 12px; border-radius: 6px;" onclick="addNewField('', true)">＋</button>
             </div>
 
-            <!-- 智慧自動折行勾選項目 (新功能) -->
-            <div class="tool-item" style="border-left: 2px solid var(--primary); padding-left: 12px; flex-direction: row; align-items: center; gap: 6px;">
-                <input type="checkbox" id="word-wrap-toggle" onchange="updateSelectedStyle('wordWrap', this.checked)" style="cursor: pointer; width: 16px; height: 16px;">
-                <label for="word-wrap-toggle" style="cursor: pointer; font-weight: 800; color: var(--primary); margin: 0;">↩️ 文字自動折行</label>
+            <div class="toolbar-divider"></div>
+
+            <!-- 個別文字設定勾選 -->
+            <div class="toolbar-group">
+                <input type="checkbox" id="individual-edit-toggle" onchange="toggleIndividualEdit()" style="cursor: pointer; width: 15px; height: 15px;">
+                <label for="individual-edit-toggle" style="cursor: pointer; font-weight: 800; color: var(--warning); font-size: 12px;">✏️ 編輯個別文字設定</label>
             </div>
 
-            <!-- 擴充雲端精美字型 -->
-            <div class="tool-item" style="border-left: 1px solid var(--border-light); padding-left: 12px;">
-                <label>字型選擇 (含精美中文字體)</label>
-                <select id="font-family" onchange="updateSelectedStyle('fontFamily', this.value)" style="font-weight: 800;">
-                    <option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif">預設系統字型</option>
-                    <option value="'Noto Sans TC', sans-serif">🌿 思源黑體 (Noto Sans TC)</option>
-                    <option value="'Noto Serif TC', serif">📜 思源宋體 (Noto Serif TC)</option>
-                    <option value="'Ma Shan Zheng', cursive">✍️ 馬山正楷 (Ma Shan Zheng)</option>
-                    <option value="'ZCOOL XiaoWei', cursive">🌸 站酷小薇體 (ZCOOL XiaoWei)</option>
-                    <option value="'Mochiy Pop One', sans-serif">🪁 可愛日系風 (Mochiy Pop One)</option>
-                    <option value="'Microsoft JhengHei', sans-serif">微軟正黑體</option>
+            <!-- 自動折行 -->
+            <div class="toolbar-group">
+                <input type="checkbox" id="word-wrap-toggle" onchange="updateSelectedStyle('wordWrap', this.checked)" style="cursor: pointer; width: 15px; height: 15px;">
+                <label for="word-wrap-toggle" style="cursor: pointer; font-weight: 800; color: var(--primary); font-size: 12px;">↩️ 自動折行</label>
+            </div>
+
+            <div class="toolbar-divider"></div>
+
+            <!-- 排版樣式微調區 -->
+            <div class="toolbar-group">
+                <select id="font-family" class="select-modern" onchange="updateSelectedStyle('fontFamily', this.value)">
+                    <option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">預設系統字型</option>
+                    <option value="'Noto Sans TC', sans-serif">🌿 思源黑體 (TC)</option>
+                    <option value="'Noto Serif TC', serif">📜 思源宋體 (TC)</option>
+                    <option value="'Ma Shan Zheng', cursive">✍️ 馬山書法</option>
+                    <option value="'ZCOOL XiaoWei', cursive">🌸 站酷手寫</option>
+                    <option value="'Mochiy Pop One', sans-serif">🪁 可愛日系風</option>
                     <option value="Arial, sans-serif">Arial</option>
                 </select>
-            </div>
-            <div class="tool-item">
-                <label>字級 (px)</label>
-                <input type="number" id="font-size" value="16" style="width: 55px;" oninput="updateSelectedStyle('fontSize', this.value + 'px')">
-            </div>
-            <div class="tool-item">
-                <label>粗細</label>
-                <select id="font-weight" onchange="updateSelectedStyle('fontWeight', this.value)">
+
+                <input type="number" id="font-size" class="input-number-modern" value="16" style="width: 48px;" oninput="updateSelectedStyle('fontSize', this.value + 'px')" title="字級">
+                <select id="font-weight" class="select-modern" onchange="updateSelectedStyle('fontWeight', this.value)">
                     <option value="normal">常規</option>
                     <option value="bold">粗體</option>
                 </select>
-            </div>
-            <div class="tool-item">
-                <label>字距</label>
-                <input type="number" id="letter-spacing" value="0" style="width: 50px;" oninput="updateSelectedStyle('letterSpacing', this.value + 'px')">
-            </div>
-            <div class="tool-item">
-                <label>行高</label>
-                <input type="number" id="line-height" value="1.2" step="0.1" style="width: 50px;" oninput="updateSelectedStyle('lineHeight', this.value)">
-            </div>
-            <div class="tool-item">
-                <label>顏色</label>
-                <input type="color" id="font-color" onchange="updateSelectedStyle('color', this.value)" style="padding: 2px; width: 35px; height: 30px; cursor: pointer;">
-            </div>
-            <div class="tool-item">
-                <label>對齊</label>
-                <select id="text-align" onchange="updateSelectedStyle('justifyContent', this.value)">
+
+                <input type="number" id="letter-spacing" class="input-number-modern" value="0" style="width: 40px;" oninput="updateSelectedStyle('letterSpacing', this.value + 'px')" title="字距">
+                <input type="color" id="font-color" onchange="updateSelectedStyle('color', this.value)" style="border: 1px solid var(--border-color); border-radius: 4px; width: 28px; height: 28px; padding: 1px; cursor: pointer;">
+                
+                <select id="text-align" class="select-modern" onchange="updateSelectedStyle('justifyContent', this.value)">
                     <option value="flex-start">靠左</option>
                     <option value="center" selected>置中</option>
                     <option value="flex-end">靠右</option>
                 </select>
             </div>
-            <div class="tool-item" style="border-left: 1px solid var(--border-light); padding-left: 12px;">
-                <label>預覽縮放</label>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="range" id="zoom-slider" min="0.3" max="1.5" step="0.05" value="0.7" style="width: 80px;" oninput="adjustZoom(this.value)">
-                    <span id="zoom-val" style="font-size: 11px; font-weight: 800; color: var(--text-sub); width: 30px;">70%</span>
+
+            <div class="toolbar-divider"></div>
+
+            <div class="toolbar-group">
+                <span class="tips-badge">💡 提示：按一下選擇與拖曳，連按兩下即可直接改字！</span>
+            </div>
+
+            <!-- 右側列印控制 -->
+            <div style="margin-left: auto; display: flex; align-items: center; gap: 12px;">
+                <div class="toolbar-group" style="font-size: 11px;">
+                    <span style="font-weight: 700; color: var(--text-sub);">縮放預覽</span>
+                    <input type="range" id="zoom-slider" min="0.3" max="1.5" step="0.05" value="0.75" style="width: 70px;" oninput="adjustZoom(this.value)">
+                    <span id="zoom-val" style="font-weight: 800; color: var(--primary); width: 30px;">75%</span>
                 </div>
+                <div style="display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700;">
+                    <input type="checkbox" id="crop-lines-toggle" checked onchange="toggleCropLines()">
+                    <label for="crop-lines-toggle" style="cursor: pointer;">裁切虛線</label>
+                </div>
+                <button class="btn btn-success" onclick="window.print()">🖨️ 輸出 A4 PDF</button>
             </div>
-            <div class="tool-item" style="flex-direction: row; align-items: center; gap: 6px; margin-top: 15px;">
-                <input type="checkbox" id="crop-lines-toggle" checked onchange="toggleCropLines()" style="cursor: pointer;">
-                <label for="crop-lines-toggle" style="cursor: pointer;">裁切虛線</label>
-            </div>
-            
-            <button class="btn btn-success" style="margin-left: auto;" onclick="window.print()">🖨️ 直接列印 PDF</button>
-            <span id="ai-status"></span>
-            <div id="dpi-msg" style="color: var(--primary); font-size: 11px; font-weight: 800;"></div>
         </div>
 
-        <!-- AI 智慧校對日誌診斷面板 -->
-        <div id="diagnostic-log"></div>
+        <!-- 畫布主要渲染與輸出區 -->
+        <div class="preview-container" id="pages-container"></div>
     </div>
 
-    <!-- 畫布主容器 -->
-    <div class="preview-container" id="pages-container"></div>
-
-    <!-- Toast 提示框 -->
+    <!-- Toast 提示組件 -->
     <div id="toast"></div>
 
     <script>
@@ -733,11 +701,10 @@
 
         // 個別文字設定狀態
         let editIndividual = false;
-        let individualConfigs = []; // Array of card configurations: individualConfigs[cardIndex] => Array of field configs
-        let selectedCardIndex = null; // Currently selected card index
+        let individualConfigs = []; // 陣列物件
+        let selectedCardIndex = null; // 當前選定卡片索引
 
         window.onload = function() {
-            // 初始化示範名單數據，確保永遠有資料供畫布直接點擊編輯
             initializeDummyDataIfEmpty();
             loadDefaultSvgBackground();
 
@@ -754,9 +721,9 @@
             
             validateSteps();
             syncSizeInputs();
-            updateSaveSlotLabels(); // 初始化存檔槽顯示
+            updateSaveSlotLabels();
             
-            // 初始化時即時同步預填的 Google Sheets URL
+            // 初始化同步
             const initialUrl = document.getElementById('sheet-url').value.trim();
             if (initialUrl) {
                 syncCloudCSV(initialUrl);
@@ -770,33 +737,29 @@
             if (!toast) return;
             toast.innerText = msg;
             if (type === 'error') {
-                toast.style.borderColor = 'var(--danger)';
-                toast.style.backgroundColor = '#fffdfd';
+                toast.style.borderLeftColor = 'var(--danger)';
             } else if (type === 'success') {
-                toast.style.borderColor = 'var(--success)';
-                toast.style.backgroundColor = '#fdfdfc';
+                toast.style.borderLeftColor = 'var(--success)';
             } else {
-                toast.style.borderColor = 'var(--border-light)';
-                toast.style.backgroundColor = '#ffffff';
+                toast.style.borderLeftColor = 'var(--primary)';
             }
             toast.style.display = 'block';
             toast.style.opacity = '1';
-            toast.style.transform = 'translateX(-50%) translateY(-5px)';
+            toast.style.transform = 'translateY(-10px)';
             setTimeout(() => {
                 toast.style.opacity = '0';
-                toast.style.transform = 'translateX(-50%) translateY(0)';
+                toast.style.transform = 'translateY(0)';
                 setTimeout(() => { toast.style.display = 'none'; }, 300);
             }, 3000);
         }
 
-        // 初始化一組預設名單
         function initializeDummyDataIfEmpty() {
             if (rawData.length === 0) {
                 rawData = [
-                    {'姓名': '陳小明', '部門': '行銷企劃處', '員工編號': 'MKT-01'},
-                    {'姓名': '林雅婷', '部門': '前端開發組', '員工編號': 'DEV-02'},
-                    {'姓名': '黃大洲', '部門': '人力資源部', '員工編號': 'HR-03'},
-                    {'姓名': '張美玲', '部門': '財務會計部', '員工編號': 'FIN-04'}
+                    {'姓名': '陳小明', '部門': '品牌行銷部', '員工編號': 'MKT-01'},
+                    {'姓名': '林雅婷', '部門': '視覺技術開發組', '員工編號': 'DEV-02'},
+                    {'姓名': '黃大洲', '部門': '資產管理部', '員工編號': 'HR-03'},
+                    {'姓名': '張美玲', '部門': '國際關係組', '員工編號': 'FIN-04'}
                 ];
             }
         }
@@ -818,22 +781,20 @@
             document.documentElement.style.setProperty('--card-width', `${cardWidthMm}mm`);
             document.documentElement.style.setProperty('--card-height', `${cardHeightMm}mm`);
 
-            document.getElementById('dpi-msg').innerText = `📐 當前尺寸：${cardWidthMm.toFixed(1)}x${cardHeightMm.toFixed(1)}mm`;
             renderPages();
         }
 
-        // 個別編輯模式切換控制
         function toggleIndividualEdit() {
             const checkbox = document.getElementById('individual-edit-toggle');
             editIndividual = checkbox.checked;
 
             if (editIndividual) {
                 initIndividualConfigs();
-                showToast("✏️ 已開啟「個別文字編輯模式」，現在您可以點選任意卡片上的文字區塊進行單獨修改或拖放！", "success");
+                showToast("✏️ 已解鎖「個別卡片編輯模式」，現在您可以對任意文字做獨立樣式位置調整！", "success");
             } else {
                 individualConfigs = [];
                 selectedCardIndex = null;
-                showToast("🔒 已關閉「個別文字編輯模式」，所有卡片將同步套用全域樣式位置。", "info");
+                showToast("🔒 已恢復「全域同步模式」，首張卡片的調整將會即時套用至所有卡片。", "info");
             }
             renderPages();
         }
@@ -849,34 +810,13 @@
         function validateSteps() {
             const inputKey = document.getElementById('gemini-key').value.trim();
             const activeKey = inputKey || apiKey;
-            const sheetUrl = document.getElementById('sheet-url').value.trim();
-
-            if (inputKey) {
-                try {
-                    localStorage.setItem('saved_gemini_key', inputKey);
-                } catch(e){}
-            }
-
-            const card1 = document.getElementById('card-step-1');
             const status1 = document.getElementById('status-1');
             if (activeKey) {
-                card1.classList.add('completed');
-                status1.innerText = inputKey ? '已配置自訂金鑰 ✓' : '環境自動就緒 ✓';
+                status1.innerText = inputKey ? '自訂 Key 就緒 ✓' : '環境內置金鑰就緒 ✓';
                 status1.style.color = 'var(--success)';
             } else {
-                card1.classList.remove('completed');
-                status1.innerText = '⚠️ 本地需填金鑰 (或啟用降級)';
+                status1.innerText = '⚠️ 本地需填金鑰(可啟用降級)';
                 status1.style.color = 'var(--warning)';
-            }
-
-            const card4 = document.getElementById('card-step-4');
-            const status4 = document.getElementById('status-4');
-            if (sheetUrl || rawData.length > 0) {
-                card4.classList.add('completed');
-                status4.innerText = rawData.length > 0 ? `已讀取名單(${rawData.length}筆) ✓` : '已預填網址 ✓';
-            } else {
-                card4.classList.remove('completed');
-                status4.innerText = '未連結(可選)';
             }
         }
 
@@ -885,25 +825,24 @@
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 856 540" width="100%" height="100%">
                 <defs>
                     <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stop-color="#f5efe6"/>
-                        <stop offset="100%" stop-color="#e8e2d5"/>
+                        <stop offset="0%" stop-color="#FAF8F5"/>
+                        <stop offset="100%" stop-color="#EBE4DC"/>
                     </linearGradient>
                 </defs>
                 <rect width="856" height="540" fill="url(#g)" rx="12"/>
-                <circle cx="800" cy="100" r="140" fill="#7d8f76" opacity="0.12"/>
-                <circle cx="80" cy="460" r="100" fill="#d48c70" opacity="0.1"/>
-                <rect x="35" y="40" width="8" height="110" rx="4" fill="#7d8f76"/>
-                <rect x="50" y="40" width="8" height="70" rx="4" fill="#d48c70"/>
-                <text x="75" y="75" font-family="sans-serif" font-size="28" font-weight="900" fill="#3d423e" letter-spacing="1">STAFF PASS</text>
-                <text x="75" y="105" font-family="sans-serif" font-size="12" font-weight="700" fill="#8a928c" letter-spacing="2.5">IDENTIFICATION CARD</text>
-                <line x1="35" y1="500" x2="821" y2="500" stroke="#dfd7cb" stroke-width="1.5"/>
+                <circle cx="800" cy="100" r="140" fill="#5c6e58" opacity="0.1"/>
+                <circle cx="80" cy="460" r="100" fill="#cc7d5c" opacity="0.08"/>
+                <rect x="35" y="40" width="6" height="110" rx="3" fill="#5c6e58"/>
+                <rect x="47" y="40" width="6" height="70" rx="3" fill="#cc7d5c"/>
+                <text x="70" y="75" font-family="sans-serif" font-size="28" font-weight="900" fill="#2b2e2c" letter-spacing="1">STAFF PASS</text>
+                <text x="70" y="105" font-family="sans-serif" font-size="11" font-weight="700" fill="#7a827c" letter-spacing="2.5">AUTOMATED STUDIO</text>
+                <line x1="35" y1="500" x2="821" y2="500" stroke="#eae4db" stroke-width="1.5"/>
             </svg>`;
             currentBgUrl = 'data:image/svg+xml;utf8,' + encodeURIComponent(svgContent);
             document.documentElement.style.setProperty('--card-width', `${cardWidthMm}mm`);
             document.documentElement.style.setProperty('--card-height', `${cardHeightMm}mm`);
         }
 
-        // 大幅強化 300 DPI 與解析度自適應邏輯 (Step 2)
         function handleTemplateUpload(input) {
             const file = input.files[0];
             if (!file) return;
@@ -927,28 +866,12 @@
                     
                     let detectedW = 8.56;
                     let detectedH = 5.40;
-                    let isStandard = false;
 
-                    if (ratio >= 1.55 && ratio <= 1.62) {
-                        detectedW = 8.56;
-                        detectedH = 5.40;
-                        isStandard = true;
-                    } else if (ratio >= 1.63 && ratio <= 1.72) {
-                        detectedW = 9.00;
-                        detectedH = 5.40;
-                        isStandard = true;
-                    } else if (ratio >= 0.95 && ratio <= 1.05) {
-                        detectedW = 6.00;
-                        detectedH = 6.00;
-                        isStandard = true;
-                    } else if (ratio >= 0.60 && ratio <= 0.66) {
-                        detectedW = 5.40;
-                        detectedH = 8.56;
-                        isStandard = true;
-                    } else {
-                        detectedW = 8.56;
-                        detectedH = 8.56 / ratio;
-                    }
+                    if (ratio >= 1.55 && ratio <= 1.62) { detectedW = 8.56; detectedH = 5.40; }
+                    else if (ratio >= 1.63 && ratio <= 1.72) { detectedW = 9.00; detectedH = 5.40; }
+                    else if (ratio >= 0.95 && ratio <= 1.05) { detectedW = 6.00; detectedH = 6.00; }
+                    else if (ratio >= 0.60 && ratio <= 0.66) { detectedW = 5.40; detectedH = 8.56; }
+                    else { detectedW = 8.56; detectedH = 8.56 / ratio; }
 
                     cardWidthMm = detectedW * 10;
                     cardHeightMm = detectedH * 10;
@@ -959,20 +882,16 @@
                     document.getElementById('card-height-input').value = detectedH.toFixed(2);
                     updateCardDimensions();
 
-                    document.getElementById('status-2').innerText = `已載入 ✓ ${w}x${h}px`;
-                    document.getElementById('status-2').style.color = 'var(--success)';
-                    
-                    showToast(`成功載入完稿圖 (${w}x${h}px)。系統已自適應卡片實體比例：${detectedW.toFixed(2)}x${detectedH.toFixed(2)} cm！`, 'success');
+                    const status2 = document.getElementById('status-2');
+                    status2.innerText = `已載入 (${w}x${h}px)`;
+                    status2.style.color = 'var(--success)';
+                    showToast(`分析圖就緒！已精確配對實體卡片比例：${detectedW.toFixed(2)}x${detectedH.toFixed(2)} cm`, 'success');
                 };
                 tempImg.src = result;
-
-                const card = document.getElementById('card-step-2');
-                card.classList.add('completed');
             };
             reader.readAsDataURL(file);
         }
 
-        // 大幅強化底圖解析度自適應邏輯 (Step 3)
         function handleBackgroundUpload(input) {
             const file = input.files[0];
             if (!file) return;
@@ -989,28 +908,12 @@
                     
                     let detectedW = 8.56;
                     let detectedH = 5.40;
-                    let isStandard = false;
 
-                    if (ratio >= 1.55 && ratio <= 1.62) {
-                        detectedW = 8.56;
-                        detectedH = 5.40;
-                        isStandard = true;
-                    } else if (ratio >= 1.63 && ratio <= 1.72) {
-                        detectedW = 9.00;
-                        detectedH = 5.40;
-                        isStandard = true;
-                    } else if (ratio >= 0.95 && ratio <= 1.05) {
-                        detectedW = 6.00;
-                        detectedH = 6.00;
-                        isStandard = true;
-                    } else if (ratio >= 0.60 && ratio <= 0.66) {
-                        detectedW = 5.40;
-                        detectedH = 8.56;
-                        isStandard = true;
-                    } else {
-                        detectedW = 8.56;
-                        detectedH = 8.56 / ratio;
-                    }
+                    if (ratio >= 1.55 && ratio <= 1.62) { detectedW = 8.56; detectedH = 5.40; }
+                    else if (ratio >= 1.63 && ratio <= 1.72) { detectedW = 9.00; detectedH = 5.40; }
+                    else if (ratio >= 0.95 && ratio <= 1.05) { detectedW = 6.00; detectedH = 6.00; }
+                    else if (ratio >= 0.60 && ratio <= 0.66) { detectedW = 5.40; detectedH = 8.56; }
+                    else { detectedW = 8.56; detectedH = 8.56 / ratio; }
 
                     cardWidthMm = detectedW * 10;
                     cardHeightMm = detectedH * 10;
@@ -1026,13 +929,11 @@
                     thumb.style.display = 'block';
                     document.getElementById('label-background').innerText = file.name;
 
-                    const card = document.getElementById('card-step-3');
-                    card.classList.add('completed');
+                    const status3 = document.getElementById('status-3');
+                    status3.innerText = `已載入底圖 (${w}x${h}px)`;
+                    status3.style.color = 'var(--success)';
                     
-                    document.getElementById('status-3').innerText = `已載入 ✓ ${w}x${h}px`;
-                    document.getElementById('status-3').style.color = 'var(--success)';
-                    
-                    showToast(`成功載入底圖 (${w}x${h}px)。系統已將卡片尺寸同步自適應為：${detectedW.toFixed(2)}x${detectedH.toFixed(2)} cm！`, 'success');
+                    showToast(`成功導入純底圖！畫布比例已設定。`, 'success');
                     renderPages();
                 };
                 imgEl.src = currentBgUrl;
@@ -1040,49 +941,6 @@
             reader.readAsDataURL(file);
         }
 
-        // CSV 安全解析器 (跳過第一行標頭)
-        function parseCSV(csvText) {
-            const lines = csvText.split(/\r?\n/);
-            if (lines.length < 1) return { headers: [], data: [] };
-            
-            function splitLine(line) {
-                let result = [];
-                let current = '';
-                let inQuotes = false;
-                for (let i = 0; i < line.length; i++) {
-                    const char = line[i];
-                    if (char === '"') {
-                        inQuotes = !inQuotes;
-                    } else if (char === ',' && !inQuotes) {
-                        result.push(current.trim());
-                        current = '';
-                    } else {
-                        current += char;
-                    }
-                }
-                result.push(current.trim());
-                return result;
-            }
-
-            const headers = splitLine(lines[0]);
-            const data = [];
-            for (let i = 1; i < lines.length; i++) {
-                if (!lines[i].trim()) continue;
-                const cols = splitLine(lines[i]);
-                if (cols.length >= headers.length) {
-                    let rowObj = {};
-                    headers.forEach((h, idx) => {
-                        if (h) {
-                            rowObj[h] = cols[idx] || '';
-                        }
-                    });
-                    data.push(rowObj);
-                }
-            }
-            return { headers, data };
-        }
-
-        // 處理本機 CSV 檔案上傳
         function handleCSVUpload(input) {
             const file = input.files[0];
             if (!file) return;
@@ -1093,15 +951,13 @@
                 const parsed = parseCSV(text);
                 if (parsed.headers.length > 0) {
                     rawData = parsed.data;
-                    document.getElementById('label-csv').innerText = `本地: ${file.name} (${rawData.length}筆)`;
-                    showToast(`成功從本機導入 ${rawData.length} 筆資料`, 'success');
-                    
-                    // 自動生成適配此 CSV 的排版欄位
+                    document.getElementById('label-csv').innerText = `已讀取名單: ${rawData.length} 筆`;
+                    showToast(`名單已解析完畢，共載入 ${rawData.length} 個人員數據！`, 'success');
                     generateFallbackFields(Object.keys(rawData[0]));
                     validateSteps();
                     renderPages();
                 } else {
-                    showToast('CSV 解析失敗，格式不合規。', 'error');
+                    showToast('CSV 解析失敗。', 'error');
                 }
             };
             reader.readAsText(file);
@@ -1117,28 +973,25 @@
             }
         }
 
-        // 同步雲端試算表並更新狀態
         async function syncCloudCSV(url) {
             const convertedUrl = convertSheetUrlToCsv(url);
             try {
                 const response = await fetch(convertedUrl);
-                if (!response.ok) throw new Error('網絡或跨網域(CORS)請求受阻');
+                if (!response.ok) throw new Error('CORS 請求受阻');
                 const csvText = await response.text();
                 const parsed = parseCSV(csvText);
                 if (parsed.headers.length > 0) {
                     rawData = parsed.data;
-                    showToast(`試算表同步成功！成功載入 ${rawData.length} 筆名單資料`, 'success');
-                    
+                    showToast(`雲端 CSV 資料同步成功！共載入 ${rawData.length} 筆名單`, 'success');
                     generateFallbackFields(Object.keys(rawData[0]));
                     validateSteps();
                     renderPages();
                 }
             } catch (err) {
-                showToast('雲端 CSV 連結讀取中，您可以點擊一鍵排版或下載 CSV 由 Step 4 本地匯入。', 'info');
+                showToast('雲端 CSV 連結讀取中，您可以先進行本地載入，或繼續編輯。', 'info');
             }
         }
 
-        // 自動欄位分層引擎
         function generateFallbackFields(headers) {
             fieldsConfig = [];
             let currentTop = 25;
@@ -1152,23 +1005,23 @@
                     left: 15,
                     width: 70,
                     height: isName ? 14 : 10,
-                    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif",
+                    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
                     fontSize: isName ? '24px' : '15px',
                     fontWeight: isName ? 'bold' : 'normal',
-                    letterSpacing: isName ? '2px' : '0px',
+                    letterSpacing: isName ? '1px' : '0px',
                     lineHeight: '1.2',
-                    color: isName ? '#3d423e' : '#7d8f76',
+                    color: isName ? '#2b2e2c' : '#5c6e58',
                     justifyContent: 'center',
-                    wordWrap: false // 預設不折行
+                    wordWrap: false
                 });
                 currentTop += isName ? 16 : 12;
             });
         }
 
-        // 【動態行進度加載動畫】調用時每行將會自動滾動遞增百分比！
         async function logWithProgress(startPercent, endPercent, type, message) {
             const logBox = document.getElementById('diagnostic-log');
             if (!logBox) return;
+            logBox.style.display = 'block';
             
             let emoji = "✦";
             if (type === 'success') emoji = "✓";
@@ -1179,34 +1032,30 @@
             logBox.appendChild(line);
             logBox.scrollTop = logBox.scrollHeight;
             
-            const duration = 250; // 進度滾動持續時間(ms)
-            const steps = 8;
+            const duration = 200; 
+            const steps = 6;
             const interval = duration / steps;
             const increment = (endPercent - startPercent) / steps;
             
             let current = startPercent;
             for (let i = 0; i <= steps; i++) {
-                line.innerHTML = `<span style="color: var(--primary); font-weight: bold;">[ ${Math.round(current)}% ]</span> ${emoji} ${message}`;
+                line.innerHTML = `<span style="color: #6e8e7c; font-weight: bold;">[ ${Math.round(current)}% ]</span> ${emoji} ${message}`;
                 current += increment;
                 await new Promise(resolve => setTimeout(resolve, interval));
             }
-            // 確保鎖定最終百分比
-            line.innerHTML = `<span style="color: var(--primary); font-weight: bold;">[ ${endPercent}% ]</span> ${emoji} ${message}`;
+            line.innerHTML = `<span style="color: #6e8e7c; font-weight: bold;">[ ${endPercent}% ]</span> ${emoji} ${message}`;
         }
 
-        // 【高相容智慧模型路由】完美避開特定模型 404 限制
         async function fetchGeminiWithRetry(activeKey, payload, diagnosticBox) {
             const finalKey = activeKey || apiKey || "";
             if (!finalKey) {
-                throw new Error("API Key 尚未配置。請在 Step 1 貼上您的 Gemini API Key。");
+                throw new Error("API Key 尚未配置。請在左側貼上您的 Gemini API Key。");
             }
 
             const routingChain = [
                 { version: "v1beta", model: "gemini-2.5-flash" },
-                { version: "v1beta", model: "gemini-2.5-flash-preview-09-2025" },
                 { version: "v1",     model: "gemini-2.5-flash" },
-                { version: "v1beta", model: "gemini-1.5-pro" },
-                { version: "v1beta", model: "gemini-1.5-flash" }
+                { version: "v1beta", model: "gemini-1.5-pro" }
             ];
 
             let lastError = null;
@@ -1215,56 +1064,33 @@
                 const config = routingChain[idx];
                 const url = `https://generativelanguage.googleapis.com/${config.version}/models/${config.model}:generateContent?key=${finalKey}`;
                 
-                await logWithProgress(30 + idx * 10, 45 + idx * 10, "info", `調用 AI 排版路由 ${config.version} / ${config.model}...`);
+                await logWithProgress(30 + idx * 15, 45 + idx * 15, "info", `連線 AI 排版模組 ${config.version} / ${config.model}...`);
 
-                let delay = 1000;
-                for (let retry = 0; retry < 2; retry++) {
-                    try {
-                        const response = await fetch(url, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
 
-                        if (response.ok) {
-                            const data = await response.json();
-                            await logWithProgress(85, 95, "success", `成功通過 ${config.model} 取得完稿對位模型！`);
-                            return data;
-                        }
-
-                        const errText = await response.text();
-                        let parsedErr = "";
-                        try {
-                            const jsonErr = JSON.parse(errText);
-                            parsedErr = jsonErr.error?.message || errText;
-                        } catch(e) {
-                            parsedErr = errText || `HTTP ${response.status}`;
-                        }
-
-                        lastError = new Error(`錯誤碼: ${response.status} (${parsedErr})`);
-
-                        if (response.status === 404) {
-                            await logWithProgress(40 + idx * 10, 45 + idx * 10, "error", `${config.model} 限制 (404)。嘗試下一個...`);
-                            break; 
-                        }
-                        
-                        if (response.status === 429) {
-                            await logWithProgress(40 + idx * 10, 45 + idx * 10, "info", `擁擠，等待 ${delay/1000} 秒後重新嘗試...`);
-                        }
-                    } catch (err) {
-                        lastError = err;
+                    if (response.ok) {
+                        const data = await response.json();
+                        await logWithProgress(85, 95, "success", `成功取得對位模型資料！`);
+                        return data;
                     }
 
-                    if (retry < 1) {
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        delay *= 2;
+                    const errText = await response.text();
+                    lastError = new Error(`錯誤碼: ${response.status}`);
+                    if (response.status === 404) {
+                        await logWithProgress(40 + idx * 15, 45 + idx * 15, "error", `${config.model} 接口受阻，切換下一路由...`);
                     }
+                } catch (err) {
+                    lastError = err;
                 }
             }
-            throw lastError || new Error("所有備用路由鏈上的 Gemini 模型皆不可用。");
+            throw lastError || new Error("無法接通所有 Gemini 接口。");
         }
 
-        // Step 5 一鍵智慧對位與校對 (大幅升級前景色吸色精準度與對比分析)
         async function runSmartLayout() {
             updateCardDimensions();
 
@@ -1272,59 +1098,49 @@
             const activeKey = inputKey || apiKey; 
 
             if (!finishedDesignBase64) {
-                showToast('請先上傳 Step 2. 完稿圖以供 AI 視覺分析定位！', 'error');
+                showToast('請先在 Section 2 選擇含文字的完稿對位圖！', 'error');
                 return;
             }
             if (!currentBgUrl) {
-                showToast('請上傳 Step 3. 底圖（系統將自動適配 2x2 排版）', 'error');
+                showToast('請先導入背景底圖！', 'error');
                 return;
             }
 
-            const aiStatus = document.getElementById('ai-status');
             const diagnosticBox = document.getElementById('diagnostic-log');
-            
-            aiStatus.innerText = '🤖 AI 正在精確對位並載入寬高設定...';
             diagnosticBox.style.display = 'block';
             diagnosticBox.innerHTML = ''; 
 
-            await logWithProgress(0, 15, "info", "啟動 2x2 高精度對位與 A4 無縫排版引擎...");
+            await logWithProgress(0, 15, "info", "啟動 A4 識別證高精密 AI 分層排版定位核心...");
 
             let csvHeaders = ['姓名', '部門', '員工編號']; 
 
             if (rawData.length > 0) {
                 csvHeaders = Object.keys(rawData[0]);
-                await logWithProgress(15, 30, "success", `成功讀取 Sheets CSV 資料，共 ${rawData.length} 筆資料。`);
+                await logWithProgress(15, 30, "success", `CSV 連接就緒，共載入 ${rawData.length} 筆資料。`);
             } else {
-                await logWithProgress(15, 30, "info", "未載入 CSV。自動注入本機預設示範名單與尺寸...");
+                await logWithProgress(15, 30, "info", "未載入數據，自動產生示範資料中...");
                 loadDemoCSVData();
                 csvHeaders = Object.keys(rawData[0]);
             }
 
-            await logWithProgress(30, 45, "info", "分析完稿圖特徵與進行前景筆畫吸色定位中...");
+            await logWithProgress(30, 45, "info", "完稿圖特徵辨識、前景色吸色校準運算中...");
             
             try {
                 const csvHeadersString = csvHeaders.join(', ');
-                
-                // 大幅提升吸色準確度 Prompt 指令：排除背景干擾，精確定位前景色
                 const prompt = `你是一個極度精確的識別證自動化高階排版系統。現在我們有一張含有範例文字的「完稿圖」以及一份 Google Sheets CSV 資料庫，其欄位標頭為：[${csvHeadersString}]。
                 完稿圖的物理尺寸標準為 856px 寬 x 540px 高。
 
                 請執行以下高精度的影像定位分析：
                 1. 針對「完稿圖」進行深度色彩和像素分析，精準定位與這組欄位 [${csvHeadersString}] 分別對照的 placeholder 文字像素位置。
-                2. 換算為相對卡片左上角的百分比 (0 到 100 之間，包含小數後兩位，例如 38.45%):
+                2. 換算為相對卡片左上角的百分比 (0 到 100 之間，包含小數後兩位):
                    - top = (文字中心垂直像素點 / 540) * 100
                    - left = (文字起點水平像素點 / 856) * 100
                    - width = (文字佔用寬度 / 856) * 100
                    - height = (文字佔用高度 / 540) * 100
-                3. 【極重要：高精度吸色】請精準吸取文字正體的前景色 Hex 顏色值：
-                   - 千萬不要僅憑直覺猜測為純黑 #000000 或純白 #ffffff。
-                   - 必須放大並分析文字筆劃 strokes 的 RGB 像素，過濾掉背景色干擾，抓取文字本身高飽和的前景色（例如冷炭灰 #3d423e、霧霾綠 #7d8f76、經典墨綠 #4e5e49、復古陶土橘 #bf6745、金棕 #967245、深藍 #1c2d42 等）。
-                   - 回傳最真實的 6 碼 Hex 顏色代碼。
-                4. 偵測文字字級 (fontSize, 如 16px 或 24px)、粗細 (fontWeight: 'bold' 或 'normal')、對齊方式 (justifyContent: 'center' 或 'flex-start' 或 'flex-end')。
-                5. 再次校正所有座標以保證無縫重疊，徹底消除重疊和偏移。
-                
+                3. 精準吸取文字筆劃 strokes 的 RGB 像素，過濾掉背景色干擾，抓取文字本身高飽和的前景色。
+                4. 偵測文字字級 (fontSize)、粗細 (fontWeight)、對齊方式 (justifyContent)。
                 請直接以 JSON 陣列格式回傳，絕對不要包含任何 Markdown 標記（如 \`\`\`json 或 \`\`\`）。回傳格式範例：
-                [{"key":"姓名","top":38.5,"left":15,"width":70,"height":12,"fontSize":"26px","fontWeight":"bold","letterSpacing":"1px","lineHeight":"1.2","color":"#3d423e","justifyContent":"center"}]`;
+                [{"key":"姓名","top":38.5,"left":15,"width":70,"height":12,"fontSize":"26px","fontWeight":"bold","letterSpacing":"1px","lineHeight":"1.2","color":"#2b2e2c","justifyContent":"center"}]`;
 
                 const payload = {
                     contents: [{
@@ -1338,7 +1154,7 @@
 
                 const result = await fetchGeminiWithRetry(activeKey, payload, diagnosticBox);
                 let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (!text) throw new Error('AI 解析結果為空。');
+                if (!text) throw new Error('AI 返回資料為空。');
 
                 text = text.trim();
                 if (text.startsWith("```")) {
@@ -1353,77 +1169,69 @@
                         left: parseFloat(field.left) || 15,
                         width: parseFloat(field.width) || 70,
                         height: parseFloat(field.height) || 10,
-                        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif",
+                        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
                         fontSize: field.fontSize || "20px",
                         fontWeight: field.fontWeight || "normal",
                         letterSpacing: field.letterSpacing || "0px",
                         lineHeight: field.lineHeight || "1.2",
-                        color: field.color || "#3d423e",
+                        color: field.color || "#2b2e2c",
                         justifyContent: field.justifyContent || "center",
                         wordWrap: false
                     }));
 
-                    await logWithProgress(95, 99, "success", `AI 精確對位與高對比吸色完成！成功定位 ${fieldsConfig.length} 個欄位：`);
-                    
+                    await logWithProgress(95, 99, "success", `AI 精確對位與吸色配對成功！`);
                     fieldsConfig.forEach(async f => {
-                        diagnosticBox.innerHTML += `<div class="log-line log-sub"><span style="color: var(--primary); font-weight: bold;">[ 99% ]</span> ✦ 欄位 <b>[${f.key}]</b> -> 座標: (${f.top}%, ${f.left}%) | 配色: <span style="color:${f.color}; font-weight:bold; background-color:#f5ede6; padding:2px 6px; border-radius:3px;">${f.color}</span> | 大小: ${f.fontSize}</div>`;
+                        diagnosticBox.innerHTML += `<div class="log-line log-sub"><span style="color: #6e8e7c; font-weight: bold;">[ 99% ]</span> ✦ 欄位 [${f.key}] -> 色值: <span style="color:${f.color}; font-weight:bold; background-color:#eae4db; padding:1px 5px; border-radius:3px;">${f.color}</span> | 大小: ${f.fontSize}</div>`;
                     });
-
-                    await logWithProgress(99, 100, "success", `恭喜！實體尺寸與高精細吸色完全就緒。`);
-                    showToast('AI 精確排版與對位吸色已完美就緒！', 'success');
+                    await logWithProgress(99, 100, "success", `智慧排版對位已成功在畫布實作！`);
+                    showToast('AI 排版與色彩匹配已全部完成！', 'success');
                 } else {
-                    throw new Error('回傳不合規的 JSON 資料格式。');
+                    throw new Error('格式不符。');
                 }
             } catch (err) {
                 console.error(err);
-                await logWithProgress(95, 100, "error", `✗ [自動安全降級] 接口受限（原因: ${err.message}）。本機防破版分層排版已啟用！`);
-                showToast('已啟用本機安全防破版降級，您可以自由調整對齊位置！', 'success');
+                await logWithProgress(95, 100, "error", `✗ [安全防線啟動] ${err.message}。改採預設物理等距分層定位！`);
+                showToast('已啟用預設排版定位，請自由在頂部工具列進行微調。', 'success');
                 generateFallbackFields(csvHeaders);
             }
 
-            aiStatus.innerText = '';
-            
             if (editIndividual) {
                 initIndividualConfigs();
             }
-            
             renderPages();
             validateSteps();
         }
 
-        // 本機預設示範名單
         function loadDemoCSVData() {
             rawData = [
-                {'姓名': '陳小明', '部門': '行銷企劃處', '員工編號': 'MKT-01'},
-                {'姓名': '林雅婷', '部門': '前端開發組', '員工編號': 'DEV-02'},
-                {'姓名': '黃大洲', '部門': '人力資源部', '員工編號': 'HR-03'},
-                {'姓名': '張美玲', '部門': '財務會計部', '員工編號': 'FIN-04'},
+                {'姓名': '陳小明', '部門': '品牌行銷部', '員工編號': 'MKT-01'},
+                {'姓名': '林雅婷', '部門': '視覺技術開發組', '員工編號': 'DEV-02'},
+                {'姓名': '黃大洲', '部門': '資產管理部', '員工編號': 'HR-03'},
+                {'姓名': '張美玲', '部門': '國際關係組', '員工編號': 'FIN-04'},
                 {'姓名': 'Alexander Charles III', '部門': '全球策略發展與公共關係處', '員工編號': 'EXEC-05'},
-                {'姓名': '李阿美', '部門': 'IT處', '員工編號': 'IT-06'}
+                {'姓名': '李阿美', '部門': 'IT資訊處', '員工編號': 'IT-06'}
             ];
             
             if (fieldsConfig.length === 0) {
                 fieldsConfig = [
-                    { key: '姓名', top: 35, left: 15, width: 70, height: 12, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif", fontSize: '26px', fontWeight: 'bold', letterSpacing: '2px', lineHeight: '1.2', color: '#3d423e', justifyContent: 'center', wordWrap: false },
-                    { key: '部門', top: 55, left: 15, width: 70, height: 10, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif", fontSize: '16px', fontWeight: 'normal', letterSpacing: '1px', lineHeight: '1.2', color: '#7a827c', justifyContent: 'center', wordWrap: false },
-                    { key: '員工編號', top: 76, left: 20, width: 60, height: 8, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif", fontSize: '13px', fontWeight: 'normal', letterSpacing: '0px', lineHeight: '1.2', color: '#8a928c', justifyContent: 'center', wordWrap: false }
+                    { key: '姓名', top: 35, left: 15, width: 70, height: 12, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontSize: '26px', fontWeight: 'bold', letterSpacing: '2px', lineHeight: '1.2', color: '#2b2e2c', justifyContent: 'center', wordWrap: false },
+                    { key: '部門', top: 55, left: 15, width: 70, height: 10, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontSize: '16px', fontWeight: 'normal', letterSpacing: '1px', lineHeight: '1.2', color: '#5c6e58', justifyContent: 'center', wordWrap: false },
+                    { key: '員工編號', top: 76, left: 20, width: 60, height: 8, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontSize: '13px', fontWeight: 'normal', letterSpacing: '0px', lineHeight: '1.2', color: '#7a827c', justifyContent: 'center', wordWrap: false }
                 ];
             }
         }
 
-        // 預載 A4 多頁 2x2 示範模式 
         function loadLocalDemo() {
             updateCardDimensions();
             loadDefaultSvgBackground();
             document.getElementById('diagnostic-log').style.display = 'none';
 
             fieldsConfig = [
-                { key: '姓名', top: 35, left: 15, width: 70, height: 12, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif", fontSize: '26px', fontWeight: 'bold', letterSpacing: '2px', lineHeight: '1.2', color: '#3d423e', justifyContent: 'center', wordWrap: false },
-                { key: '部門', top: 55, left: 15, width: 70, height: 10, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif", fontSize: '16px', fontWeight: 'normal', letterSpacing: '1px', lineHeight: '1.2', color: '#7a827c', justifyContent: 'center', wordWrap: false },
-                { key: '員工編號', top: 76, left: 20, width: 60, height: 8, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif", fontSize: '13px', fontWeight: 'normal', letterSpacing: '0px', lineHeight: '1.2', color: '#8a928c', justifyContent: 'center', wordWrap: false }
+                { key: '姓名', top: 35, left: 15, width: 70, height: 12, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontSize: '26px', fontWeight: 'bold', letterSpacing: '2px', lineHeight: '1.2', color: '#2b2e2c', justifyContent: 'center', wordWrap: false },
+                { key: '部門', top: 55, left: 15, width: 70, height: 10, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontSize: '16px', fontWeight: 'normal', letterSpacing: '1px', lineHeight: '1.2', color: '#5c6e58', justifyContent: 'center', wordWrap: false },
+                { key: '員工編號', top: 76, left: 20, width: 60, height: 8, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontSize: '13px', fontWeight: 'normal', letterSpacing: '0px', lineHeight: '1.2', color: '#7a827c', justifyContent: 'center', wordWrap: false }
             ];
             loadDemoCSVData();
-            
             syncSizeInputs();
             
             if (editIndividual) {
@@ -1433,10 +1241,9 @@
             renderPages();
             selectFieldIndividual('姓名', editIndividual ? 0 : null);
             validateSteps();
-            showToast('已成功導入 6 筆測試名單！雙擊卡片文字可直接線上改字。', 'success');
+            showToast('已載入 6 筆測試示範名單！雙擊文字即可進行線上改字與即時同步！', 'success');
         }
 
-        // 縮放預覽
         function adjustZoom(val) {
             document.getElementById('zoom-val').innerText = Math.round(val * 100) + '%';
             const pages = document.querySelectorAll('.a4-page');
@@ -1468,9 +1275,9 @@
             
             const newFieldObj = {
                 key: key, top: 20, left: 15, width: 70, height: 12,
-                fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif", fontSize: '18px', 
+                fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", fontSize: '18px', 
                 fontWeight: 'normal', letterSpacing: '0px', lineHeight: '1.2',
-                color: '#3d423e', justifyContent: 'center', wordWrap: false
+                color: '#2b2e2c', justifyContent: 'center', wordWrap: false
             };
 
             fieldsConfig.push(newFieldObj);
@@ -1516,7 +1323,6 @@
             renderPages();
         }
 
-        // 智慧選擇個別欄位屬性
         function selectFieldIndividual(key, cardIndex) {
             selectedKey = key;
             selectedCardIndex = cardIndex;
@@ -1548,10 +1354,9 @@
                 document.getElementById('font-size').value = parseInt(cfg.fontSize) || 16;
                 document.getElementById('font-weight').value = cfg.fontWeight || 'normal';
                 document.getElementById('letter-spacing').value = parseInt(cfg.letterSpacing) || 0;
-                document.getElementById('line-height').value = cfg.lineHeight || 1.2;
-                document.getElementById('font-color').value = cfg.color || '#3d423e';
+                document.getElementById('font-color').value = cfg.color || '#2b2e2c';
                 document.getElementById('text-align').value = cfg.justifyContent || 'center';
-                document.getElementById('word-wrap-toggle').checked = !!cfg.wordWrap; // 更新折行狀態
+                document.getElementById('word-wrap-toggle').checked = !!cfg.wordWrap;
             }
         }
 
@@ -1571,7 +1376,6 @@
                 if (cfg) {
                     cfg[property] = value;
                 }
-                // 同步至各子卡
                 if (editIndividual) {
                     individualConfigs.forEach(cfgList => {
                         const field = cfgList.find(f => f.key === selectedKey);
@@ -1584,11 +1388,11 @@
             renderPages(); 
         }
 
-        // 2x2 多頁自動分頁引擎（完美支持 contenteditable 畫布直接改字 與 自動折行）
+        // 核心排版引擎：單擊精確選取與拖曳，連按兩下 (Double Click) 進入文字直接編輯
         function renderPages() {
             const container = document.getElementById('pages-container');
             container.innerHTML = '';
-            const cardsPerPage = 4; // 2x2
+            const cardsPerPage = 4; // 2x2 Layout
             
             let dataList = [];
             if (rawData.length > 0) {
@@ -1604,7 +1408,7 @@
 
             let currentPageEl = null;
             let currentWrapper = null;
-            const currentZoom = parseFloat(document.getElementById('zoom-slider').value) || 0.7;
+            const currentZoom = parseFloat(document.getElementById('zoom-slider').value) || 0.75;
 
             dataList.forEach((item, index) => {
                 if (index % cardsPerPage === 0) {
@@ -1614,7 +1418,6 @@
 
                     currentPageEl = document.createElement('div');
                     currentPageEl.className = 'a4-page';
-                    
                     currentPageEl.style.transform = `scale(${currentZoom})`;
                     currentPageEl.style.transformOrigin = 'top center';
 
@@ -1656,14 +1459,13 @@
                     layer.style.lineHeight = cfg.lineHeight;
                     layer.style.color = cfg.color;
                     
-                    // 點擊直接編輯的富文本容器 (contenteditable="true")
+                    // 文字編輯框 (平時設為 contenteditable="false")
                     const editableContent = document.createElement('div');
                     editableContent.className = 'text-content-editable';
-                    editableContent.contentEditable = "true";
+                    editableContent.contentEditable = "false"; 
                     editableContent.style.justifyContent = cfg.justifyContent || "center";
                     editableContent.style.fontSize = cfg.fontSize;
                     
-                    // 實踐自動折行邏輯 (Requirement 1)
                     if (cfg.wordWrap) {
                         editableContent.style.whiteSpace = "normal";
                         editableContent.style.wordBreak = "break-all";
@@ -1676,19 +1478,39 @@
 
                     editableContent.innerText = item[cfg.key] !== undefined ? item[cfg.key] : `[${cfg.key}]`;
 
-                    // 防止拖拽與選取改字衝突，阻斷 innerMouseDown 冒泡
-                    editableContent.addEventListener('mousedown', (e) => {
+                    // 關鍵修復：雙擊時啟用 contenteditable 以防止與選取拖曳發生衝突
+                    layer.addEventListener('dblclick', (e) => {
                         e.stopPropagation();
+                        // 設為選取狀態
+                        selectFieldIndividual(cfg.key, editIndividual ? index : null);
+                        
+                        editableContent.contentEditable = "true";
+                        editableContent.focus();
+                        
+                        // 自動全選文字便於修改
+                        const range = document.createRange();
+                        range.selectNodeContents(editableContent);
+                        const sel = window.getSelection();
+                        sel.removeAllRanges();
+                        sel.addRange(range);
                     });
 
-                    // 編輯完成，滑鼠移開時即時同步名單記憶體 (Requirement 1)
+                    // 編輯完成，滑鼠移開時即時同步名單數據
                     editableContent.addEventListener('blur', (e) => {
+                        editableContent.contentEditable = "false";
                         const updatedValue = e.target.innerText;
                         if (rawData[index]) {
                             rawData[index][cfg.key] = updatedValue;
                         }
-                        // 全域即時通知
-                        showToast(`已成功修改第 ${index + 1} 張卡片中的【${cfg.key}】為「${updatedValue}」！`, 'success');
+                        showToast(`已即時同步第 ${index + 1} 張卡片的欄位【${cfg.key}】`, 'success');
+                    });
+
+                    // 鍵盤 Enter 鍵阻止預設行行為並觸發 Blur 鎖定
+                    editableContent.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            editableContent.blur();
+                        }
                     });
 
                     layer.appendChild(editableContent);
@@ -1696,7 +1518,11 @@
                     // 僅在有控制權時才顯示刪除和 resize 控制點
                     const canControl = (index === 0 || editIndividual);
                     if (canControl) {
-                        layer.addEventListener('mousedown', (e) => startDragOrResize(e, cfg, layer, cardEl, index));
+                        layer.addEventListener('mousedown', (e) => {
+                            // 若點擊的是刪除鈕直接退出，避免干擾
+                            if (e.target.classList.contains('delete-btn')) return;
+                            startDragOrResize(e, cfg, layer, cardEl, index);
+                        });
                         
                         const handle = document.createElement('div');
                         handle.className = 'resize-handle';
@@ -1725,8 +1551,8 @@
         }
 
         function startDragOrResize(e, cfg, layer, cardEl, cardIndex) {
-            if(e.target.classList.contains('delete-btn')) return;
             e.stopPropagation();
+            // 切換為當前焦點
             selectFieldIndividual(cfg.key, editIndividual ? cardIndex : null);
 
             const isResize = e.target.classList.contains('resize-handle');
@@ -1767,7 +1593,7 @@
             document.addEventListener('mouseup', onMouseUp);
         }
 
-        // 專案存檔系統管理邏輯 (Requirement 4)
+        // 5組本地儲存槽專案管理
         function updateSaveSlotLabels() {
             const select = document.getElementById('save-slot-select');
             for (let i = 1; i <= 5; i++) {
@@ -1777,15 +1603,14 @@
                     const meta = JSON.parse(rawMeta);
                     option.text = `槽位 ${i}: ${meta.name} (${meta.time})`;
                 } else {
-                    option.text = `存檔槽 ${i} (無紀錄)`;
+                    option.text = `專案槽 ${i} (空白)`;
                 }
             }
         }
 
-        // 儲存當前專案
         function saveProjectSlot() {
             const slot = document.getElementById('save-slot-select').value;
-            const projectName = prompt("請輸入此專案存檔名稱：", `製卡專案-${new Date().toLocaleDateString()}`);
+            const projectName = prompt("請輸入此專案存檔名稱：", `識別證專案-${new Date().toLocaleDateString()}`);
             if (projectName === null) return; 
 
             const name = projectName.trim() || `無標題專案-${slot}`;
@@ -1809,19 +1634,18 @@
                 localStorage.setItem(`id_card_project_slot_${slot}`, JSON.stringify(saveObj));
                 localStorage.setItem(`id_card_project_slot_${slot}_meta`, JSON.stringify(metaObj));
                 updateSaveSlotLabels();
-                showToast(`專案成功儲存至「存檔槽 ${slot}」！`, 'success');
+                showToast(`專案已成功儲存至槽位 ${slot}！`, 'success');
             } catch (e) {
                 console.error(e);
-                showToast("儲存失敗，可能超出 LocalStorage 容量限制（建議點擊 AI 排版或使用較小檔案底圖）。", "error");
+                showToast("專案儲存容量受限，建議使用較小檔案的底圖背景。", "error");
             }
         }
 
-        // 載入已有專案
         function loadProjectSlot() {
             const slot = document.getElementById('save-slot-select').value;
             const rawDataJson = localStorage.getItem(`id_card_project_slot_${slot}`);
             if (!rawDataJson) {
-                showToast(`「存檔槽 ${slot}」目前沒有任何專案資料。`, 'error');
+                showToast(`專案槽 ${slot} 目前沒有儲存任何專案。`, 'error');
                 return;
             }
 
@@ -1838,38 +1662,30 @@
                 lastCardWidth = saveObj.lastCardWidth || (cardWidthMm / 10);
                 lastCardHeight = saveObj.lastCardHeight || (cardHeightMm / 10);
 
-                // 同步控制面板勾選框與輸入框
                 document.getElementById('individual-edit-toggle').checked = editIndividual;
                 syncSizeInputs();
                 updateCardDimensions();
                 
-                // 還原背景預覽縮圖
+                // 還原背景底圖預覽
                 const thumb = document.getElementById('thumb-background');
                 if (currentBgUrl && !currentBgUrl.startsWith('data:image/svg+xml')) {
                     thumb.src = currentBgUrl;
                     thumb.style.display = 'block';
-                    document.getElementById('label-background').innerText = "已恢復歷史底圖";
-                    document.getElementById('status-3').innerText = "已恢復 ✓";
-                    document.getElementById('status-3').style.color = "var(--success)";
-                    document.getElementById('card-step-3').classList.add('completed');
+                    document.getElementById('label-background').innerText = "已恢復備份底圖";
                 } else {
                     thumb.style.display = 'none';
-                    document.getElementById('label-background').innerText = "選擇純背景底圖";
-                    document.getElementById('status-3').innerText = "預設 SVG";
-                    document.getElementById('status-3').style.color = "var(--text-sub)";
-                    document.getElementById('card-step-3').classList.remove('completed');
+                    document.getElementById('label-background').innerText = "📁 點擊選取背景底圖";
                 }
 
                 renderPages();
                 validateSteps();
-                showToast(`已成功讀取「存檔槽 ${slot}」的完整專案！`, 'success');
+                showToast(`備份專案 ${slot} 已成功載入讀取！`, 'success');
             } catch(e) {
                 console.error(e);
-                showToast("載入專案時發生解析錯誤。", "error");
+                showToast("載入專案解析出錯。", "error");
             }
         }
 
-        // 轉換 Google Sheets 分享網址至對應的 CSV 匯出連結
         function convertSheetUrlToCsv(url) {
             if (!url) return "";
             if (url.includes("[docs.google.com/spreadsheets](https://docs.google.com/spreadsheets)")) {
