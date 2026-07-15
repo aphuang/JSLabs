@@ -293,7 +293,7 @@
             font-family: monospace, sans-serif;
             font-size: 11px;
             color: #5d635f;
-            max-height: 150px;
+            max-height: 180px;
             overflow-y: auto;
             display: none;
             width: 100%;
@@ -494,9 +494,9 @@
         
         <!-- 右上角版本號與日期時間標示 -->
         <div class="version-tag">
-            <span>v2.5.0</span>
+            <span>v0.2.6</span>
             <span style="color: var(--border-light); font-weight: normal;">|</span>
-            <span>2026-07-15 15:33</span>
+            <span>2026-07-15 15:55</span>
         </div>
         
         <div class="steps-grid">
@@ -506,9 +506,9 @@
                     <span>Step 1. 運行金鑰</span>
                     <span class="step-badge">1</span>
                 </div>
-                <input type="text" id="gemini-key" placeholder="金鑰(系統已預設自動載入)" autocomplete="new-password" oninput="validateSteps()">
+                <input type="text" id="gemini-key" placeholder="貼上您的 Gemini API Key" autocomplete="new-password" oninput="validateSteps()">
                 <div style="text-align: right; margin-top: 5px;">
-                    <span class="step-status" id="status-1">已就緒 ✓</span>
+                    <span class="step-status" id="status-1">偵測中...</span>
                 </div>
             </div>
 
@@ -655,6 +655,7 @@
     <div id="toast"></div>
 
     <script>
+        // API 金鑰環境變數：在 Canvas preview 平台運行時會自動注入，外部部署/本機運作時則需透過 Step 1 手動輸入
         const apiKey = "";
 
         let currentBgUrl = ''; 
@@ -684,7 +685,7 @@
             validateSteps();
             syncSizeInputs();
             
-            // 初始化時即時同步預填的 Google Sheets URL，提升載入體驗
+            // 初始化時即時同步預填的 Google Sheets URL
             const initialUrl = document.getElementById('sheet-url').value.trim();
             if (initialUrl) {
                 syncCloudCSV(initialUrl);
@@ -743,14 +744,22 @@
             const activeKey = inputKey || apiKey;
             const sheetUrl = document.getElementById('sheet-url').value.trim();
 
+            if (inputKey) {
+                try {
+                    localStorage.setItem('saved_gemini_key', inputKey);
+                } catch(e){}
+            }
+
             const card1 = document.getElementById('card-step-1');
             const status1 = document.getElementById('status-1');
             if (activeKey) {
                 card1.classList.add('completed');
-                status1.innerText = inputKey ? '已手動覆蓋 ✓' : '環境自動就緒 ✓';
+                status1.innerText = inputKey ? '已配置自訂金鑰 ✓' : '環境自動就緒 ✓';
+                status1.style.color = 'var(--success)';
             } else {
-                card1.classList.add('completed'); 
-                status1.innerText = '環境自動就緒 ✓';
+                card1.classList.remove('completed');
+                status1.innerText = '⚠️ 本地需填金鑰 (或啟用降級)';
+                status1.style.color = 'var(--warning)';
             }
 
             const card4 = document.getElementById('card-step-4');
@@ -861,7 +870,6 @@
             if (!url) return "";
             if (url.includes("docs.google.com/spreadsheets")) {
                 if (url.includes("/pub?")) {
-                    // 若已經是發布格式，直接回傳
                     return url;
                 }
                 const matches = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
@@ -997,33 +1005,83 @@
             });
         }
 
-        // 呼叫 Gemini 專用退避重試函式 (不 log 重試過程，遇到 429 或網絡中斷自動延遲再試)
-        async function fetchGeminiWithRetry(activeKey, payload) {
+        // 【核心升級】智慧多模型路由呼叫，完美避開特定模型 404 Tier 限制
+        async function fetchGeminiWithRetry(activeKey, payload, diagnosticBox) {
             const finalKey = activeKey || apiKey || "";
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${finalKey}`;
-            let delay = 1000;
+            if (!finalKey) {
+                throw new Error("API Key 尚未配置。請在 Step 1 貼上您的 Gemini API Key。");
+            }
+
+            // 多版本、多模型備用鏈。Google API 金鑰常因 Tier 限制特定 Preview 資源
+            const routingChain = [
+                { version: "v1beta", model: "gemini-2.5-flash-preview-09-2025" },
+                { version: "v1beta", model: "gemini-2.5-flash" },
+                { version: "v1",     model: "gemini-2.5-flash" },
+                { version: "v1beta", model: "gemini-1.5-flash" },
+                { version: "v1",     model: "gemini-1.5-flash" },
+                { version: "v1beta", model: "gemini-1.5-pro" }
+            ];
+
             let lastError = null;
 
-            for (let i = 0; i < 5; i++) {
-                try {
-                    const response = await fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    if (response.ok) {
-                        return await response.json();
+            for (let idx = 0; idx < routingChain.length; idx++) {
+                const config = routingChain[idx];
+                const url = `https://generativelanguage.googleapis.com/${config.version}/models/${config.model}:generateContent?key=${finalKey}`;
+                
+                diagnosticBox.innerHTML += `<div class="log-line info">✦ [排版嘗試 ${idx + 1}/${routingChain.length}] 調用 ${config.version} / ${config.model}...</div>`;
+                diagnosticBox.scrollTop = diagnosticBox.scrollHeight;
+
+                let delay = 1000;
+                // 每款模型的指數退避重試
+                for (let retry = 0; retry < 2; retry++) {
+                    try {
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            diagnosticBox.innerHTML += `<div class="log-line success">✓ [排版就緒] 成功通過 ${config.model} 取得完稿對位模型！</div>`;
+                            diagnosticBox.scrollTop = diagnosticBox.scrollHeight;
+                            return data;
+                        }
+
+                        // 抓取 Google 錯誤細節，方便用戶追蹤
+                        const errText = await response.text();
+                        let parsedErr = "";
+                        try {
+                            const jsonErr = JSON.parse(errText);
+                            parsedErr = jsonErr.error?.message || errText;
+                        } catch(e) {
+                            parsedErr = errText || `HTTP ${response.status}`;
+                        }
+
+                        lastError = new Error(`錯誤碼: ${response.status} (${parsedErr})`);
+
+                        // 404 (Not Found) 指向型號不支持，不作該型號重試直接切換下一個
+                        if (response.status === 404) {
+                            diagnosticBox.innerHTML += `<div class="log-line error">⚠ [無權限/不存在] ${config.model} 回傳 404。即將切換備份模型路由...</div>`;
+                            diagnosticBox.scrollTop = diagnosticBox.scrollHeight;
+                            break; 
+                        }
+                        
+                        if (response.status === 429) {
+                            diagnosticBox.innerHTML += `<div class="log-line info">✦ [頻率超限 429] 等待 ${delay/1000} 秒後重新嘗試...</div>`;
+                            diagnosticBox.scrollTop = diagnosticBox.scrollHeight;
+                        }
+                    } catch (err) {
+                        lastError = err;
                     }
-                    lastError = new Error(`API 錯誤代碼: ${response.status}`);
-                } catch (err) {
-                    lastError = err;
-                }
-                if (i < 4) {
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    delay *= 2;
+
+                    if (retry < 1) {
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                    }
                 }
             }
-            throw lastError || new Error("請求失敗");
+            throw lastError || new Error("所有路由鏈上的 Gemini 終端皆不可用。");
         }
 
         // Step 5 一鍵智慧對位與校對
@@ -1058,7 +1116,7 @@
                 csvHeaders = Object.keys(rawData[0]);
             }
 
-            diagnosticBox.innerHTML += `<div class="log-line info">✦ [AI 分析中] 傳送完稿圖至 Gemini API，自動比對並吸取 [${csvHeaders.join(', ')}] 文字位置與配色...</div>`;
+            diagnosticBox.innerHTML += `<div class="log-line info">✦ [AI 分析中] 正在發送完稿範本進行影像特徵定位...</div>`;
             try {
                 const csvHeadersString = csvHeaders.join(', ');
                 const prompt = `你是一個極度精確的識別證自動化排版系統。現在我們有一張含有範例文字的「完稿圖」以及一份 Google Sheets CSV 資料庫，其欄位標頭為：[${csvHeadersString}]。
@@ -1079,7 +1137,8 @@
                     }]
                 };
 
-                const result = await fetchGeminiWithRetry(activeKey, payload);
+                // 調用高抗災 API 呼叫鏈
+                const result = await fetchGeminiWithRetry(activeKey, payload, diagnosticBox);
                 let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (!text) throw new Error('AI 解析結果為空。');
 
@@ -1119,8 +1178,8 @@
                 console.error(err);
                 
                 // 進入高容錯降級流程 (Fallback)
-                diagnosticBox.innerHTML += `<div class="log-line error">✗ [AI 降級啟動] 遇到網路波動或金鑰未配置（${err.message}）。已自動啟動「本機欄位智慧分層排版」，名單已 100% 成功生成！</div>`;
-                showToast('智慧對位未成功，已自動採用系統預置高相容排版樣式，您可以自由拖動調整。', 'success');
+                diagnosticBox.innerHTML += `<div class="log-line error">✗ [AI 智慧降級啟動] 連線被拒（原因：${err.message}）。系統已無縫切換「本機智慧分層排版模式」，所有數據 100% 成功導入生成！</div>`;
+                showToast('智慧對位已啟用本地降級排版，您可以自由拖動對齊！', 'success');
                 
                 // 智慧自適應產生欄位
                 generateFallbackFields(csvHeaders);
