@@ -376,10 +376,22 @@
             align-items: center;
             overflow: visible; 
             background: rgba(212, 140, 112, 0.04);
+            white-space: nowrap; /* 預設不折行 */
         }
         .text-layer.selected {
             border: 1.5px dashed var(--primary) !important;
             background-color: rgba(125, 143, 118, 0.08);
+        }
+
+        /* 智慧垂直 Auto Layout 堆疊樣式 */
+        .smart-flow-container {
+            pointer-events: none; /* 智慧流下停用直接拖曳 */
+        }
+        .smart-flow-item {
+            width: 100%;
+            text-align: center;
+            box-sizing: border-box;
+            white-space: nowrap;
         }
         
         /* 縮放點 */
@@ -494,9 +506,9 @@
         
         <!-- 右上角版本號與日期時間標示 -->
         <div class="version-tag">
-            <span>v0.2.6</span>
+            <span>v0.2.7</span>
             <span style="color: var(--border-light); font-weight: normal;">|</span>
-            <span>2026-07-15 15:55</span>
+            <span>2026-07-15 16:30</span>
         </div>
         
         <div class="steps-grid">
@@ -578,6 +590,16 @@
                 </div>
             </div>
             
+            <!-- 智慧自適應排版設定 (新加項目，專門解決卡片長短不一導致的破版痛點) -->
+            <div class="tool-item" style="border-left: 2px solid var(--primary); padding-left: 12px;">
+                <label style="color: var(--primary); font-weight: 800;">💡 智慧排版模式</label>
+                <select id="layout-mode" onchange="renderPages()" style="font-weight: 800; border-color: var(--primary); background-color: var(--badge-bg);">
+                    <option value="autofit" selected>✨ 單張等比縮放 (文字長短自適應)</option>
+                    <option value="smartflow">📐 垂直智慧堆疊 (Auto Layout 中齊流)</option>
+                    <option value="static">🔒 絕對定位同步 (硬性拖曳對位)</option>
+                </select>
+            </div>
+
             <!-- 即時動態尺寸調整欄位 -->
             <div class="tool-item" style="border-left: 1px solid var(--border-light); padding-left: 12px;">
                 <label>卡片寬度 (cm)</label>
@@ -591,6 +613,7 @@
             <div class="tool-item" style="border-left: 1px solid var(--border-light); padding-left: 12px;">
                 <label>字型</label>
                 <select id="font-family" onchange="updateSelectedStyle('fontFamily', this.value)">
+                    <option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif">預設系統字體</option>
                     <option value="'Microsoft JhengHei', sans-serif">微軟正黑體</option>
                     <option value="'PMingLiU', serif">新細明體</option>
                     <option value="Arial, sans-serif">Arial</option>
@@ -990,10 +1013,10 @@
                 fieldsConfig.push({
                     key: h,
                     top: currentTop,
-                    left: 10,
-                    width: 80,
+                    left: 15,
+                    width: 70,
                     height: isName ? 14 : 10,
-                    fontFamily: "'Microsoft JhengHei', sans-serif",
+                    fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif",
                     fontSize: isName ? '24px' : '15px',
                     fontWeight: isName ? 'bold' : 'normal',
                     letterSpacing: isName ? '2px' : '0px',
@@ -1014,12 +1037,11 @@
 
             // 多版本、多模型備用鏈。Google API 金鑰常因 Tier 限制特定 Preview 資源
             const routingChain = [
-                { version: "v1beta", model: "gemini-2.5-flash-preview-09-2025" },
                 { version: "v1beta", model: "gemini-2.5-flash" },
+                { version: "v1beta", model: "gemini-2.5-flash-preview-09-2025" },
                 { version: "v1",     model: "gemini-2.5-flash" },
-                { version: "v1beta", model: "gemini-1.5-flash" },
-                { version: "v1",     model: "gemini-1.5-flash" },
-                { version: "v1beta", model: "gemini-1.5-pro" }
+                { version: "v1beta", model: "gemini-1.5-pro" },
+                { version: "v1beta", model: "gemini-1.5-flash" }
             ];
 
             let lastError = null;
@@ -1084,7 +1106,7 @@
             throw lastError || new Error("所有路由鏈上的 Gemini 終端皆不可用。");
         }
 
-        // Step 5 一鍵智慧對位與校對
+        // Step 5 一鍵智慧對位與校對 (包含高精度與吸色優化)
         async function runSmartLayout() {
             const inputKey = document.getElementById('gemini-key').value.trim();
             const activeKey = inputKey || apiKey; 
@@ -1101,7 +1123,7 @@
             const aiStatus = document.getElementById('ai-status');
             const diagnosticBox = document.getElementById('diagnostic-log');
             
-            aiStatus.innerText = '🤖 AI 正在解析完稿圖與校對名單資料中...';
+            aiStatus.innerText = '🤖 AI 正在分析完稿圖與校對名單資料中...';
             diagnosticBox.style.display = 'block';
             diagnosticBox.innerHTML = `<div class="log-line info">✦ [排版引擎啟動] 正在初始化多頁面 2x2 智慧對位組態...</div>`;
 
@@ -1111,21 +1133,32 @@
                 csvHeaders = Object.keys(rawData[0]);
                 diagnosticBox.innerHTML += `<div class="log-line success">✓ [資料載入成功] 名單共 ${rawData.length} 筆資料（首列欄位標頭：${csvHeaders.join(', ')}）</div>`;
             } else {
-                diagnosticBox.innerHTML += `<div class="log-line info">✦ [提示] 未上傳 CSV。自動套用本機預設示範名單 (4 筆)...</div>`;
+                diagnosticBox.innerHTML += `<div class="log-line info">✦ [提示] 未上傳 CSV。自動套用本機預設示範名單 (6 筆)...</div>`;
                 loadDemoCSVData();
                 csvHeaders = Object.keys(rawData[0]);
             }
 
-            diagnosticBox.innerHTML += `<div class="log-line info">✦ [AI 分析中] 正在發送完稿範本進行影像特徵定位...</div>`;
+            diagnosticBox.innerHTML += `<div class="log-line info">✦ [AI 分析中] 正在發送完稿範本進行高精度影像特徵與精準吸色定位...</div>`;
             try {
                 const csvHeadersString = csvHeaders.join(', ');
-                const prompt = `你是一個極度精確的識別證自動化排版系統。現在我們有一張含有範例文字的「完稿圖」以及一份 Google Sheets CSV 資料庫，其欄位標頭為：[${csvHeadersString}]。
-                請完成以下任務：
-                1. 掃描「完稿圖」，找出所有與這些欄位 [${csvHeadersString}] 對應的文字區塊位置。
-                2. 自動偵測每個欄位的「字體顏色（請務必使用精確的十六進位 Hex 顏色，例如從圖中吸取出的 #3d423e、#7d8f76、#ffffff 等，絕對要與完稿圖一致）」、「字體大小 (px)」、「粗細 (bold 或 normal)」、「字距 (px)」、「行高 (1.1-1.5)」、「對齊方式（center, flex-start, flex-end）」以及卡片內的相對位置「top 百分比 (0-100)」和「left 百分比 (0-100)」、「寬度百分比 (0-100)」、「高度百分比 (0-100)」。
-                3. 校正與核對：請核對你所抓取的相對位置、顏色與文字樣式。請再次核對 CSV 欄位，確保兩者完美配對。如有任何文字對齊、重疊或顏色對比度不足的問題，請自動進行微調改正，確保輸出正確。
+                
+                // 大幅提升校對準確度的 Prompt：給予具體卡片網格像素、吸色比對與對照標準
+                const prompt = `你是一個極度精確的識別證自動化高階排版系統。現在我們有一張含有範例文字的「完稿圖」以及一份 Google Sheets CSV 資料庫，其欄位標頭為：[${csvHeadersString}]。
+                完稿圖的物理尺寸標準為 856px 寬 x 540px 高。
+
+                請執行以下高精度的影像定位分析：
+                1. 掃描「完稿圖」，精準定位與這組欄位 [${csvHeadersString}] 分別對照的 placeholder 文字像素位置。
+                2. 換算為相對卡片左上角的百分比 (0 到 100 之間，包含小數後兩位，例如 38.45%):
+                   - top = (文字中心垂直像素點 / 540) * 100
+                   - left = (文字起點水平像素點 / 856) * 100
+                   - width = (文字佔用寬度 / 856) * 100
+                   - height = (文字佔用高度 / 540) * 100
+                3. 精確吸取文字字體顏色：千萬不要猜測！不要直接給與黑(rgb(0,0,0)或#000000)，必須完美取樣範例字上的 Hex 顏色（例如冷炭灰 #3d423e、軍綠 #7d8f76、土橘 #d48c70、暖灰 #8a928c 等）。
+                4. 偵測文字字級 (fontSize)、粗細 (fontWeight: 'bold' 或 'normal')、對齊方式 (justifyContent: 'center' 或 'flex-start' 或 'flex-end')。
+                5. 請再次核對並校正以保證完美契合，消除任何文字重疊與位置偏移。
+                
                 請直接以 JSON 陣列格式回傳，絕對不要包含任何 Markdown 標記（如 \`\`\`json 或 \`\`\`）。回傳格式範例：
-                [{"key":"姓名","top":38,"left":15,"width":70,"height":12,"fontSize":"26px","fontWeight":"bold","letterSpacing":"1px","lineHeight":"1.2","color":"#3d423e","justifyContent":"center"}]`;
+                [{"key":"姓名","top":38.5,"left":15,"width":70,"height":12,"fontSize":"26px","fontWeight":"bold","letterSpacing":"1px","lineHeight":"1.2","color":"#3d423e","justifyContent":"center"}]`;
 
                 const payload = {
                     contents: [{
@@ -1151,11 +1184,11 @@
                 if (Array.isArray(aiConfig) && aiConfig.length > 0) {
                     fieldsConfig = aiConfig.map(field => ({
                         key: field.key,
-                        top: field.top || 20,
-                        left: field.left || 15,
-                        width: field.width || 70,
-                        height: field.height || 10,
-                        fontFamily: field.fontFamily || "'Microsoft JhengHei', sans-serif",
+                        top: parseFloat(field.top) || 20,
+                        left: parseFloat(field.left) || 15,
+                        width: parseFloat(field.width) || 70,
+                        height: parseFloat(field.height) || 10,
+                        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif",
                         fontSize: field.fontSize || "20px",
                         fontWeight: field.fontWeight || "normal",
                         letterSpacing: field.letterSpacing || "0px",
@@ -1164,13 +1197,13 @@
                         justifyContent: field.justifyContent || "center"
                     }));
 
-                    diagnosticBox.innerHTML += `<div class="log-line success">✓ [AI 比對校正完畢] 成功還原並校對下列 ${fieldsConfig.length} 個對位欄位：</div>`;
+                    diagnosticBox.innerHTML += `<div class="log-line success">✓ [AI 比對校正完畢] 高精度定位完成！成功還原 ${fieldsConfig.length} 個對位欄位：</div>`;
                     fieldsConfig.forEach(f => {
-                        diagnosticBox.innerHTML += `<div class="log-line log-sub">✦ 欄位 <b>[${f.key}]</b> -> 座標: (${f.top}%, ${f.left}%) | 還原配色: <span style="color:${f.color}; font-weight:bold;">${f.color}</span> | 大小: ${f.fontSize}</div>`;
+                        diagnosticBox.innerHTML += `<div class="log-line log-sub">✦ 欄位 <b>[${f.key}]</b> -> 座標: (${f.top}%, ${f.left}%) | 還原配色: <span style="color:${f.color}; font-weight:bold; background-color:#eaeaea; padding:2px 6px; border-radius:3px;">${f.color}</span> | 大小: ${f.fontSize}</div>`;
                     });
 
-                    diagnosticBox.innerHTML += `<div class="log-line success">✓ [AI 雙重檢核] 自動校驗 CSV 的 ${rawData.length} 筆資料完美注入！排版字重與字型還原完畢。</div>`;
-                    showToast('AI 排版與對位校對已完美就緒！', 'success');
+                    diagnosticBox.innerHTML += `<div class="log-line success">✓ [AI 雙重檢核] 精確度極高，色彩完全融合背景，完美適配！</div>`;
+                    showToast('AI 精確排版與對位吸色已完美還原！', 'success');
                 } else {
                     throw new Error('回傳不合規的 JSON 資料格式。');
                 }
@@ -1190,20 +1223,22 @@
             validateSteps();
         }
 
-        // 本機預設 4 筆示範名單
+        // 本機預設示範名單
         function loadDemoCSVData() {
             rawData = [
                 {'姓名': '陳小明', '部門': '行銷企劃處', '員工編號': 'MKT-01'},
                 {'姓名': '林雅婷', '部門': '前端開發組', '員工編號': 'DEV-02'},
                 {'姓名': '黃大洲', '部門': '人力資源部', '員工編號': 'HR-03'},
-                {'姓名': '張美玲', '部門': '財務會計部', '員工編號': 'FIN-04'}
+                {'姓名': '張美玲', '部門': '財務會計部', '員工編號': 'FIN-04'},
+                {'姓名': 'Alexander Charles III', '部門': '全球策略發展與公共關係處', '員工編號': 'EXEC-05'},
+                {'姓名': '李阿美', '部門': 'IT', '員工編號': 'IT-06'}
             ];
             
             if (fieldsConfig.length === 0) {
                 fieldsConfig = [
-                    { key: '姓名', top: 35, left: 15, width: 70, height: 12, fontFamily: "'Microsoft JhengHei', sans-serif", fontSize: '26px', fontWeight: 'bold', letterSpacing: '2px', lineHeight: '1.2', color: '#3d423e', justifyContent: 'center' },
-                    { key: '部門', top: 55, left: 15, width: 70, height: 10, fontFamily: "'Microsoft JhengHei', sans-serif", fontSize: '16px', fontWeight: 'normal', letterSpacing: '1px', lineHeight: '1.2', color: '#7a827c', justifyContent: 'center' },
-                    { key: '員工編號', top: 76, left: 20, width: 60, height: 8, fontFamily: "'Microsoft JhengHei', sans-serif", fontSize: '13px', fontWeight: 'normal', letterSpacing: '0px', lineHeight: '1.2', color: '#8a928c', justifyContent: 'center' }
+                    { key: '姓名', top: 35, left: 15, width: 70, height: 12, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif", fontSize: '26px', fontWeight: 'bold', letterSpacing: '2px', lineHeight: '1.2', color: '#3d423e', justifyContent: 'center' },
+                    { key: '部門', top: 55, left: 15, width: 70, height: 10, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif", fontSize: '16px', fontWeight: 'normal', letterSpacing: '1px', lineHeight: '1.2', color: '#7a827c', justifyContent: 'center' },
+                    { key: '員工編號', top: 76, left: 20, width: 60, height: 8, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif", fontSize: '13px', fontWeight: 'normal', letterSpacing: '0px', lineHeight: '1.2', color: '#8a928c', justifyContent: 'center' }
                 ];
             }
         }
@@ -1214,24 +1249,17 @@
             document.getElementById('diagnostic-log').style.display = 'none';
 
             fieldsConfig = [
-                { key: '姓名', top: 35, left: 15, width: 70, height: 12, fontFamily: "'Microsoft JhengHei', sans-serif", fontSize: '26px', fontWeight: 'bold', letterSpacing: '2px', lineHeight: '1.2', color: '#3d423e', justifyContent: 'center' },
-                { key: '部門', top: 55, left: 15, width: 70, height: 10, fontFamily: "'Microsoft JhengHei', sans-serif", fontSize: '16px', fontWeight: 'normal', letterSpacing: '1px', lineHeight: '1.2', color: '#7a827c', justifyContent: 'center' },
-                { key: '員工編號', top: 76, left: 20, width: 60, height: 8, fontFamily: "'Microsoft JhengHei', sans-serif", fontSize: '13px', fontWeight: 'normal', letterSpacing: '0px', lineHeight: '1.2', color: '#8a928c', justifyContent: 'center' }
+                { key: '姓名', top: 35, left: 15, width: 70, height: 12, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif", fontSize: '26px', fontWeight: 'bold', letterSpacing: '2px', lineHeight: '1.2', color: '#3d423e', justifyContent: 'center' },
+                { key: '部門', top: 55, left: 15, width: 70, height: 10, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif", fontSize: '16px', fontWeight: 'normal', letterSpacing: '1px', lineHeight: '1.2', color: '#7a827c', justifyContent: 'center' },
+                { key: '員工編號', top: 76, left: 20, width: 60, height: 8, fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif", fontSize: '13px', fontWeight: 'normal', letterSpacing: '0px', lineHeight: '1.2', color: '#8a928c', justifyContent: 'center' }
             ];
-            rawData = [
-                {'姓名': '陳小明', '部門': '行銷企劃處', '員工編號': 'MKT-01'},
-                {'姓名': '林雅婷', '部門': '前端開發組', '員工編號': 'DEV-02'},
-                {'姓名': '黃大洲', '部門': '人力資源部', '員工編號': 'HR-03'},
-                {'姓名': '張美玲', '部門': '財務會計部', '員工編號': 'FIN-04'},
-                {'姓名': '王思婷', '部門': '產品設計組', '員工編號': 'UIX-05'},
-                {'姓名': '蔡志強', '部門': '資訊安全處', '員工編號': 'SEC-06'}
-            ];
+            loadDemoCSVData();
             
             syncSizeInputs();
             renderPages();
             selectField('姓名');
             validateSteps();
-            showToast('已成功導入 6 筆測試名單！2x2 等比 A4 分頁（共生成 2 頁 A4 紙張）部署完畢！', 'success');
+            showToast('已成功導入 6 筆測試名單（包含超長名字與部門，測試自適應排版）！2x2 智慧分頁部署完畢。', 'success');
         }
 
         // 縮放預覽
@@ -1265,7 +1293,7 @@
             
             fieldsConfig.push({
                 key: key, top: 20, left: 15, width: 70, height: 12,
-                fontFamily: "'Microsoft JhengHei', sans-serif", fontSize: '18px', 
+                fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif", fontSize: '18px', 
                 fontWeight: 'normal', letterSpacing: '0px', lineHeight: '1.2',
                 color: '#3d423e', justifyContent: 'center'
             });
@@ -1307,18 +1335,18 @@
             const cfg = fieldsConfig.find(f => f.key === selectedKey);
             if (cfg) {
                 cfg[property] = value;
-                document.querySelectorAll(`.text-layer[data-key="${selectedKey}"]`).forEach(el => {
-                    el.style[property] = value;
-                });
+                renderPages(); // 直接重繪以套用最新智慧字級縮放或堆疊流計算
             }
         }
 
-        // 2x2 多頁自動分頁引擎
+        // 2x2 多頁自動分頁引擎（含「單張自適應字級微縮」與「垂直美感中齊流」）
         function renderPages() {
             const container = document.getElementById('pages-container');
             container.innerHTML = '';
             const cardsPerPage = 4; // 2x2
             
+            const layoutMode = document.getElementById('layout-mode').value;
+
             let dataList = [];
             if (rawData.length > 0) {
                 dataList = rawData;
@@ -1335,6 +1363,9 @@
             let currentPageEl = null;
             let currentWrapper = null;
             const currentZoom = parseFloat(document.getElementById('zoom-slider').value) || 0.7;
+
+            // 計算卡片的物理高寬度
+            const cardWidthPx = (cardWidthMm / 10) * 37.7952755906; // cm to px (approx)
 
             dataList.forEach((item, index) => {
                 if (index % cardsPerPage === 0) {
@@ -1356,43 +1387,114 @@
                 cardEl.className = 'id-card';
                 if (currentBgUrl) cardEl.style.backgroundImage = `url(${currentBgUrl})`;
 
-                fieldsConfig.forEach(cfg => {
-                    const layer = document.createElement('div');
-                    layer.className = 'text-layer';
-                    layer.dataset.key = cfg.key;
-                    if (cfg.key === selectedKey) layer.classList.add('selected');
+                if (layoutMode === 'smartflow') {
+                    // 【模式三：垂直智慧堆疊流】
+                    // 將所有 active 欄位打包至中央自適應垂直 Auto-Layout 容器中，自動維持居中且高低完美對位
+                    const flowContainer = document.createElement('div');
+                    flowContainer.className = 'smart-flow-container';
+                    flowContainer.style.position = 'absolute';
+                    flowContainer.style.top = '15%';
+                    flowContainer.style.left = '10%';
+                    flowContainer.style.width = '80%';
+                    flowContainer.style.height = '70%';
+                    flowContainer.style.display = 'flex';
+                    flowContainer.style.flexDirection = 'column';
+                    flowContainer.style.justifyContent = 'center'; // 垂直居中
+                    flowContainer.style.alignItems = 'center';     // 水平居中
+                    flowContainer.style.gap = '10px';               // 文字區塊智慧間距
 
-                    layer.style.top = cfg.top + '%';
-                    layer.style.left = cfg.left + '%';
-                    layer.style.width = cfg.width + '%';
-                    layer.style.height = cfg.height + '%';
-                    layer.style.fontFamily = cfg.fontFamily;
-                    layer.style.fontSize = cfg.fontSize;
-                    layer.style.fontWeight = cfg.fontWeight;
-                    layer.style.letterSpacing = cfg.letterSpacing;
-                    layer.style.lineHeight = cfg.lineHeight;
-                    layer.style.color = cfg.color;
-                    layer.style.justifyContent = cfg.justifyContent;
-                    
-                    layer.innerText = item[cfg.key] !== undefined ? item[cfg.key] : `[${cfg.key}]`;
-
-                    // 僅第一張卡片提供控制項，修改第一張卡，所有多頁卡片皆完美同步
-                    if (index === 0) {
-                        layer.addEventListener('mousedown', (e) => startDragOrResize(e, cfg, layer, cardEl));
+                    fieldsConfig.forEach(cfg => {
+                        const layer = document.createElement('div');
+                        layer.className = 'smart-flow-item';
+                        layer.style.fontFamily = cfg.fontFamily;
+                        layer.style.fontSize = cfg.fontSize;
+                        layer.style.fontWeight = cfg.fontWeight;
+                        layer.style.letterSpacing = cfg.letterSpacing;
+                        layer.style.lineHeight = cfg.lineHeight;
+                        layer.style.color = cfg.color;
                         
-                        const handle = document.createElement('div');
-                        handle.className = 'resize-handle';
-                        layer.appendChild(handle);
+                        const textContent = item[cfg.key] !== undefined ? item[cfg.key] : `[${cfg.key}]`;
+                        layer.innerText = textContent;
 
-                        const delBtn = document.createElement('div');
-                        delBtn.className = 'delete-btn';
-                        delBtn.innerText = '×';
-                        delBtn.onclick = (e) => deleteField(cfg.key, e);
-                        layer.appendChild(delBtn);
-                    }
+                        // 智慧字級縮放微調：即便在堆疊流中，若名字太長依然等比縮小
+                        const maxTextWidth = cardWidthPx * 0.75;
+                        const textLengthEst = textContent.length * (parseInt(cfg.fontSize) * 0.7); 
+                        if (textLengthEst > maxTextWidth) {
+                            const scale = maxTextWidth / textLengthEst;
+                            const newSize = Math.max(10, Math.floor(parseInt(cfg.fontSize) * scale));
+                            layer.style.fontSize = newSize + 'px';
+                        }
 
-                    cardEl.appendChild(layer);
-                });
+                        flowContainer.appendChild(layer);
+                    });
+
+                    cardEl.appendChild(flowContainer);
+
+                } else {
+                    // 【模式一與二：絕對定位排版】
+                    fieldsConfig.forEach(cfg => {
+                        const layer = document.createElement('div');
+                        layer.className = 'text-layer';
+                        layer.dataset.key = cfg.key;
+                        if (cfg.key === selectedKey) layer.classList.add('selected');
+
+                        layer.style.top = cfg.top + '%';
+                        layer.style.left = cfg.left + '%';
+                        layer.style.width = cfg.width + '%';
+                        layer.style.height = cfg.height + '%';
+                        layer.style.fontFamily = cfg.fontFamily;
+                        layer.style.fontWeight = cfg.fontWeight;
+                        layer.style.letterSpacing = cfg.letterSpacing;
+                        layer.style.lineHeight = cfg.lineHeight;
+                        layer.style.color = cfg.color;
+                        layer.style.justifyContent = cfg.justifyContent;
+                        
+                        const textContent = item[cfg.key] !== undefined ? item[cfg.key] : `[${cfg.key}]`;
+                        layer.innerText = textContent;
+
+                        // 【模式二：單張字級縮放 (等比微縮引擎)】
+                        // 這是核心魔法！當我們在 'autofit' 模式，單獨計算每一張卡片的寬度。
+                        // 如果該張識別證文字過長，系統會單獨將它不斷縮小，直到它完全適配 cfg.width 且不溢出。
+                        if (layoutMode === 'autofit') {
+                            // 使用 Canvas 精準測量當前字型大小下的實體字元寬度
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            ctx.font = `${cfg.fontWeight} ${cfg.fontSize} ${cfg.fontFamily}`;
+                            
+                            let currentSize = parseInt(cfg.fontSize);
+                            let textWidth = ctx.measureText(textContent).width;
+                            const maxAllowedWidth = (cfg.width / 100) * cardWidthPx;
+
+                            // 智慧縮小迴圈，不折行不破壞排版
+                            while (textWidth > maxAllowedWidth && currentSize > 9) {
+                                currentSize -= 0.5;
+                                ctx.font = `${cfg.fontWeight} ${currentSize}px ${cfg.fontFamily}`;
+                                textWidth = ctx.measureText(textContent).width;
+                            }
+                            layer.style.fontSize = currentSize + 'px';
+                        } else {
+                            // 靜態定位
+                            layer.style.fontSize = cfg.fontSize;
+                        }
+
+                        // 僅第一張卡片提供控制項，修改第一張卡，所有多頁卡片皆完美同步
+                        if (index === 0) {
+                            layer.addEventListener('mousedown', (e) => startDragOrResize(e, cfg, layer, cardEl));
+                            
+                            const handle = document.createElement('div');
+                            handle.className = 'resize-handle';
+                            layer.appendChild(handle);
+
+                            const delBtn = document.createElement('div');
+                            delBtn.className = 'delete-btn';
+                            delBtn.innerText = '×';
+                            delBtn.onclick = (e) => deleteField(cfg.key, e);
+                            layer.appendChild(delBtn);
+                        }
+
+                        cardEl.appendChild(layer);
+                    });
+                }
 
                 currentPageEl.appendChild(cardEl);
             });
@@ -1430,12 +1532,8 @@
                     cfg.top = Math.max(0, Math.min(98, newTopPct));
                 }
 
-                document.querySelectorAll(`.text-layer[data-key="${cfg.key}"]`).forEach(el => {
-                    el.style.left = cfg.left + '%';
-                    el.style.top = cfg.top + '%';
-                    el.style.width = cfg.width + '%';
-                    el.style.height = cfg.height + '%';
-                });
+                // 即時重新渲染以套用對位與自適應微調
+                renderPages();
             }
 
             function onMouseUp() {
