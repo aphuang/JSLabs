@@ -360,39 +360,28 @@
             height: 100%;
         }
 
-        /* 裁切虛線樣式：使用淡淡的溫和灰線 */
+        /* 裁切虛線樣式 */
         .has-crop-lines .id-card {
             outline: 1px dashed #d5cebf; 
             outline-offset: -1px;
         }
 
-        /* 可拖曳與縮放的文字容器 */
+        /* 可拖曳與縮放的文字容器 - 零 padding 偏移以維持 100% 精準對齊 */
         .text-layer {
             position: absolute;
             cursor: move;
             border: 1px dashed var(--warning); 
             box-sizing: border-box;
-            padding: 2px 18px 2px 2px; 
+            padding: 0px; 
             display: flex;
             align-items: center;
             overflow: visible; 
             background: rgba(212, 140, 112, 0.04);
-            white-space: nowrap; /* 預設不折行 */
+            white-space: nowrap; 
         }
         .text-layer.selected {
             border: 1.5px dashed var(--primary) !important;
             background-color: rgba(125, 143, 118, 0.08);
-        }
-
-        /* 智慧垂直 Auto Layout 堆疊樣式 */
-        .smart-flow-container {
-            pointer-events: none; /* 智慧流下停用直接拖曳 */
-        }
-        .smart-flow-item {
-            width: 100%;
-            text-align: center;
-            box-sizing: border-box;
-            white-space: nowrap;
         }
         
         /* 縮放點 */
@@ -482,7 +471,7 @@
             .version-tag { display: none !important; }
             body { background: none !important; }
             .preview-container { padding: 0 !important; }
-            .text-layer { border: none !important; background: none !important; padding-right: 2px !important; }
+            .text-layer { border: none !important; background: none !important; }
             .resize-handle, .delete-btn { display: none !important; }
             .page-wrapper { margin: 0 !important; height: auto !important; }
             .a4-page { 
@@ -507,13 +496,13 @@
         
         <!-- 右上角版本號與日期時間標示 -->
         <div class="version-tag">
-            <span>v0.2.8</span>
+            <span>v0.2.9</span>
             <span style="color: var(--border-light); font-weight: normal;">|</span>
-            <span>2026-07-15 16:35</span>
+            <span>2026-07-15 17:30</span>
         </div>
         
         <div class="steps-grid">
-            <!-- Step 1 (自適應防密碼管理員亂填) -->
+            <!-- Step 1 -->
             <div class="step-card" id="card-step-1">
                 <div class="step-header">
                     <span>Step 1. 運行金鑰</span>
@@ -553,7 +542,7 @@
                 </div>
             </div>
 
-            <!-- Step 4 -->
+            <!-- Step 4 (含卡片寬度/卡片高度 物理尺寸設定與 CSV 匯入) -->
             <div class="step-card" id="card-step-4">
                 <div class="step-header">
                     <span>Step 4. Sheets CSV / 本機檔案</span>
@@ -565,7 +554,23 @@
                 </div>
                 <label for="upload-csv" class="file-upload-label" id="label-csv" style="padding: 6px; font-size: 10px; border-style: dotted; margin-top: 6px;">或載入本機 CSV</label>
                 <input type="file" id="upload-csv" accept=".csv" style="display: none;" onchange="handleCSVUpload(this)">
-                <div style="text-align: right; margin-top: 4px;">
+                
+                <!-- 尺寸尺寸編輯欄位，放置於此 -->
+                <div style="margin-top: 10px; border-top: 1px dashed var(--border-light); padding-top: 10px;">
+                    <span style="font-size: 11px; font-weight: 700; color: var(--text-main); display: block; margin-bottom: 4px;">📐 卡片列印實體尺寸 (cm)</span>
+                    <div style="display: flex; gap: 8px;">
+                        <div style="flex: 1;">
+                            <label style="font-size: 9px; font-weight: 700; color: var(--text-sub); display:block; margin-bottom: 2px;">寬度 (cm)</label>
+                            <input type="number" id="card-width-input" value="8.56" step="0.01" min="3" max="20" style="width: 100%; padding: 6px; font-size: 11px; border: 1px solid var(--border-light); border-radius: 4px; box-sizing: border-box;" oninput="updateCardDimensions()">
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="font-size: 9px; font-weight: 700; color: var(--text-sub); display:block; margin-bottom: 2px;">高度 (cm)</label>
+                            <input type="number" id="card-height-input" value="5.40" step="0.01" min="3" max="20" style="width: 100%; padding: 6px; font-size: 11px; border: 1px solid var(--border-light); border-radius: 4px; box-sizing: border-box;" oninput="updateCardDimensions()">
+                        </div>
+                    </div>
+                </div>
+
+                <div style="text-align: right; margin-top: 5px;">
                     <span class="step-status" id="status-4">已預填網址✓</span>
                 </div>
             </div>
@@ -590,29 +595,11 @@
                     <button class="btn btn-primary" style="padding: 4px 10px; border-radius: 6px;" onclick="addNewField('', true)">＋</button>
                 </div>
             </div>
-            
-            <!-- 智慧自適應排版設定 (新加項目，專門解決卡片長短不一導致的破版痛點) -->
-            <div class="tool-item" style="border-left: 2px solid var(--primary); padding-left: 12px;">
-                <label style="color: var(--primary); font-weight: 800;">💡 智慧排版模式</label>
-                <select id="layout-mode" onchange="renderPages()" style="font-weight: 800; border-color: var(--primary); background-color: var(--badge-bg);">
-                    <option value="autofit" selected>✨ 單張等比縮放 (文字長短自適應)</option>
-                    <option value="smartflow">📐 垂直智慧堆疊 (Auto Layout 中齊流)</option>
-                    <option value="static">🔒 絕對定位同步 (硬性拖曳對位)</option>
-                </select>
-            </div>
 
-            <!-- 即時動態尺寸調整欄位 -->
-            <div class="tool-item" style="border-left: 1px solid var(--border-light); padding-left: 12px;">
-                <label>卡片寬度 (cm)</label>
-                <input type="number" id="card-width-input" value="8.56" step="0.05" min="3" max="20" style="width: 75px;" oninput="updateCardDimensions()">
-            </div>
-            <div class="tool-item">
-                <label>卡片高度 (cm)</label>
-                <input type="number" id="card-height-input" value="5.40" step="0.05" min="3" max="20" style="width: 75px;" oninput="updateCardDimensions()">
-            </div>
-            <div class="tool-item">
-                <label>實體縮放操作</label>
-                <button class="btn btn-demo" style="margin-top: 0; background-color: var(--badge-bg); border-color: var(--primary); padding: 7px 12px; font-weight: 800;" onclick="recalculateTextProportions()">⚖️ 依比例重算文字座標</button>
+            <!-- 智慧個別編輯勾選項目 -->
+            <div class="tool-item" style="border-left: 2px solid var(--warning); padding-left: 12px; flex-direction: row; align-items: center; gap: 6px;">
+                <input type="checkbox" id="individual-edit-toggle" onchange="toggleIndividualEdit()" style="cursor: pointer; width: 16px; height: 16px;">
+                <label for="individual-edit-toggle" style="cursor: pointer; font-weight: 800; color: var(--warning); margin: 0;">✏️ 編輯個別文字設定</label>
             </div>
 
             <div class="tool-item" style="border-left: 1px solid var(--border-light); padding-left: 12px;">
@@ -699,6 +686,11 @@
         let finishedDesignBase64 = ''; 
         let finishedDesignMime = '';
 
+        // 【全新核心狀態】個別文字設定
+        let editIndividual = false;
+        let individualConfigs = []; // Array of card configurations: individualConfigs[cardIndex] => Array of field configs
+        let selectedCardIndex = null; // Currently selected card index
+
         window.onload = function() {
             loadDefaultSvgBackground();
 
@@ -767,6 +759,30 @@
 
             document.getElementById('dpi-msg').innerText = `📐 當前尺寸：${cardWidthMm.toFixed(1)}x${cardHeightMm.toFixed(1)}mm`;
             renderPages();
+        }
+
+        // 個別編輯模式切換控制
+        function toggleIndividualEdit() {
+            const checkbox = document.getElementById('individual-edit-toggle');
+            editIndividual = checkbox.checked;
+
+            if (editIndividual) {
+                initIndividualConfigs();
+                showToast("✏️ 已開啟「個別文字編輯模式」，現在您可以點選任意卡片上的文字區塊進行單獨修改或拖放！", "success");
+            } else {
+                individualConfigs = [];
+                selectedCardIndex = null;
+                showToast("🔒 已關閉「個別文字編輯模式」，所有卡片將同步套用全域樣式位置。", "info");
+            }
+            renderPages();
+        }
+
+        function initIndividualConfigs() {
+            individualConfigs = [];
+            const dataLength = rawData.length > 0 ? rawData.length : 4;
+            for (let i = 0; i < dataLength; i++) {
+                individualConfigs.push(JSON.parse(JSON.stringify(fieldsConfig)));
+            }
         }
 
         function validateSteps() {
@@ -842,7 +858,6 @@
                 img.style.display = 'block';
                 document.getElementById('label-template').innerText = file.name;
                 
-                // 智慧讀取完稿圖並自適應實體尺寸比例
                 const tempImg = new Image();
                 tempImg.onload = function() {
                     const w = tempImg.naturalWidth;
@@ -853,7 +868,6 @@
                     let detectedH = 5.40;
                     let isStandard = false;
 
-                    // 檢查是否符合常見製卡比例 (標準卡、商務名片、方形證、直式卡)
                     if (ratio >= 1.55 && ratio <= 1.62) {
                         detectedW = 8.56;
                         detectedH = 5.40;
@@ -871,7 +885,6 @@
                         detectedH = 8.56;
                         isStandard = true;
                     } else {
-                        // 若不屬標準卡則等比例放縮，固定寬度 8.56cm 換算高度
                         detectedW = 8.56;
                         detectedH = 8.56 / ratio;
                     }
@@ -885,7 +898,6 @@
                     document.getElementById('card-height-input').value = detectedH.toFixed(2);
                     updateCardDimensions();
 
-                    const dpiMsg = isStandard ? ` (${w}x${h}px 300DPI規格自動配置)` : ` (${w}x${h}px 等比配置)`;
                     document.getElementById('status-2').innerText = `已載入 ✓ ${w}x${h}px`;
                     document.getElementById('status-2').style.color = 'var(--success)';
                     
@@ -967,54 +979,6 @@
             reader.readAsDataURL(file);
         }
 
-        // 手動變更實體高寬尺寸後，提供「一鍵等比縮放重新換算定位座標」的強健邏輯
-        function recalculateTextProportions() {
-            const wNew = parseFloat(document.getElementById('card-width-input').value);
-            const hNew = parseFloat(document.getElementById('card-height-input').value);
-            if (!wNew || !hNew || isNaN(wNew) || isNaN(hNew)) {
-                showToast("請輸入有效的卡片寬度與高度！", "error");
-                return;
-            }
-
-            const ratioOld = lastCardWidth / lastCardHeight;
-            const ratioNew = wNew / hNew;
-
-            // 計算寬度與高度相對於中心點比例
-            fieldsConfig.forEach(cfg => {
-                const scaleX = ratioOld / ratioNew;
-                
-                cfg.width = Math.min(95, Math.max(5, cfg.width * scaleX));
-                // 水平百分比偏離中心量等比縮放
-                cfg.left = 50 + (cfg.left - 50) * scaleX;
-                cfg.left = Math.min(95, Math.max(0, cfg.left));
-            });
-
-            lastCardWidth = wNew;
-            lastCardHeight = hNew;
-            
-            cardWidthMm = wNew * 10;
-            cardHeightMm = hNew * 10;
-            
-            updateCardDimensions();
-            renderPages();
-            showToast("⚖️ 文字物理比例與防溢出座標已重新校正換算完畢！", "success");
-        }
-
-        // 轉換 Google Sheets 分享網址至對應的 CSV 匯出連結
-        function convertSheetUrlToCsv(url) {
-            if (!url) return "";
-            if (url.includes("docs.google.com/spreadsheets")) {
-                if (url.includes("/pub?")) {
-                    return url;
-                }
-                const matches = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
-                if (matches && matches[1]) {
-                    return `https://docs.google.com/spreadsheets/d/${matches[1]}/export?format=csv`;
-                }
-            }
-            return url;
-        }
-
         // CSV 安全解析器 (跳過第一行標頭)
         function parseCSV(csvText) {
             const lines = csvText.split(/\r?\n/);
@@ -1069,7 +1033,7 @@
                 if (parsed.headers.length > 0) {
                     rawData = parsed.data;
                     document.getElementById('label-csv').innerText = `本地: ${file.name} (${rawData.length}筆)`;
-                    showToast(`成功從本機導入 ${rawData.length} 筆資料（已自動跳過首行標頭）`, 'success');
+                    showToast(`成功從本機導入 ${rawData.length} 筆資料`, 'success');
                     
                     // 自動生成適配此 CSV 的排版欄位
                     generateFallbackFields(Object.keys(rawData[0]));
@@ -1139,8 +1103,8 @@
             });
         }
 
-        // 支援動態進度百分比的日誌寫入器
-        async function logWithProgress(percent, type, message) {
+        // 【重大升級：動態行進度加載動畫】調用時每行將會自動滾動遞增百分比！
+        async function logWithProgress(startPercent, endPercent, type, message) {
             const logBox = document.getElementById('diagnostic-log');
             if (!logBox) return;
             
@@ -1150,12 +1114,22 @@
             
             const line = document.createElement('div');
             line.className = `log-line ${type}`;
-            line.innerHTML = `<span style="color: var(--primary); font-weight: bold;">[ ${percent}% ]</span> ${emoji} ${message}`;
             logBox.appendChild(line);
             logBox.scrollTop = logBox.scrollHeight;
             
-            // 稍作延遲呈現精美動態進度
-            await new Promise(resolve => setTimeout(resolve, 300));
+            const duration = 250; // 進度滾動持續時間(ms)
+            const steps = 8;
+            const interval = duration / steps;
+            const increment = (endPercent - startPercent) / steps;
+            
+            let current = startPercent;
+            for (let i = 0; i <= steps; i++) {
+                line.innerHTML = `<span style="color: var(--primary); font-weight: bold;">[ ${Math.round(current)}% ]</span> ${emoji} ${message}`;
+                current += increment;
+                await new Promise(resolve => setTimeout(resolve, interval));
+            }
+            // 確保鎖定最終百分比
+            line.innerHTML = `<span style="color: var(--primary); font-weight: bold;">[ ${endPercent}% ]</span> ${emoji} ${message}`;
         }
 
         // 【核心級高相容】智慧多模型路由呼叫，完美避開特定模型 404 Tier 限制
@@ -1179,7 +1153,7 @@
                 const config = routingChain[idx];
                 const url = `https://generativelanguage.googleapis.com/${config.version}/models/${config.model}:generateContent?key=${finalKey}`;
                 
-                await logWithProgress(35 + idx * 10, "info", `調用 AI 排版路由 ${config.version} / ${config.model}...`);
+                await logWithProgress(30 + idx * 10, 45 + idx * 10, "info", `調用 AI 排版路由 ${config.version} / ${config.model}...`);
 
                 let delay = 1000;
                 for (let retry = 0; retry < 2; retry++) {
@@ -1192,7 +1166,7 @@
 
                         if (response.ok) {
                             const data = await response.json();
-                            await logWithProgress(85, "success", `成功通過 ${config.model} 取得完稿對位模型！`);
+                            await logWithProgress(85, 95, "success", `成功通過 ${config.model} 取得完稿對位模型！`);
                             return data;
                         }
 
@@ -1208,12 +1182,12 @@
                         lastError = new Error(`錯誤碼: ${response.status} (${parsedErr})`);
 
                         if (response.status === 404) {
-                            await logWithProgress(40 + idx * 10, "error", `${config.model} 權限限制 (404)。自動切換至備份鏈...`);
+                            await logWithProgress(40 + idx * 10, 45 + idx * 10, "error", `${config.model} 限制 (404)。嘗試下一個...`);
                             break; 
                         }
                         
                         if (response.status === 429) {
-                            await logWithProgress(40 + idx * 10, "info", `模型擁擠，等待 ${delay/1000} 秒後重新嘗試...`);
+                            await logWithProgress(40 + idx * 10, 45 + idx * 10, "info", `擁擠，等待 ${delay/1000} 秒後重新嘗試...`);
                         }
                     } catch (err) {
                         lastError = err;
@@ -1228,8 +1202,11 @@
             throw lastError || new Error("所有備用路由鏈上的 Gemini 模型皆不可用。");
         }
 
-        // Step 5 一鍵智慧對位與校對 (高精度、吸色及百分比進度優化)
+        // Step 5 一鍵智慧對位與校對 (讀取 Step 4 輸入寬高並生成)
         async function runSmartLayout() {
+            // 首先更新卡片實體物理尺寸，確保寬高鎖定
+            updateCardDimensions();
+
             const inputKey = document.getElementById('gemini-key').value.trim();
             const activeKey = inputKey || apiKey; 
 
@@ -1245,29 +1222,28 @@
             const aiStatus = document.getElementById('ai-status');
             const diagnosticBox = document.getElementById('diagnostic-log');
             
-            aiStatus.innerText = '🤖 AI 正在精確分析完稿圖位置...';
+            aiStatus.innerText = '🤖 AI 正在精確對位並載入寬高設定...';
             diagnosticBox.style.display = 'block';
             diagnosticBox.innerHTML = ''; // 清空先前日誌
 
-            await logWithProgress(5, "info", "啟動 2x2 高精度對位引擎與智慧分流器...");
+            await logWithProgress(0, 15, "info", "啟動 2x2 高精度對位與 A4 無縫排版引擎...");
 
             let csvHeaders = ['姓名', '部門', '員工編號']; 
 
             if (rawData.length > 0) {
                 csvHeaders = Object.keys(rawData[0]);
-                await logWithProgress(15, "success", `成功讀取名單，共 ${rawData.length} 筆資料（欄位：${csvHeaders.join(', ')}）`);
+                await logWithProgress(15, 30, "success", `成功讀取 Sheets CSV 資料，共 ${rawData.length} 筆資料。`);
             } else {
-                await logWithProgress(15, "info", "提示：未偵測到 CSV。自動載入本機 6 筆測試示範名單...");
+                await logWithProgress(15, 30, "info", "未載入 CSV。自動注入本機 6 筆測試示範名單與尺寸...");
                 loadDemoCSVData();
                 csvHeaders = Object.keys(rawData[0]);
             }
 
-            await logWithProgress(25, "info", "分析完稿圖解析度特徵與 DPI 排版網格點中...");
+            await logWithProgress(30, 45, "info", "分析完稿圖特徵與進行精確吸色定位中...");
             
             try {
                 const csvHeadersString = csvHeaders.join(', ');
                 
-                // 大幅提升校對與吸色準確度
                 const prompt = `你是一個極度精確的識別證自動化高階排版系統。現在我們有一張含有範例文字的「完稿圖」以及一份 Google Sheets CSV 資料庫，其欄位標頭為：[${csvHeadersString}]。
                 完稿圖的物理尺寸標準為 856px 寬 x 540px 高。
 
@@ -1295,7 +1271,6 @@
                     }]
                 };
 
-                // 調用高抗波動 API
                 const result = await fetchGeminiWithRetry(activeKey, payload, diagnosticBox);
                 let text = result.candidates?.[0]?.content?.parts?.[0]?.text;
                 if (!text) throw new Error('AI 解析結果為空。');
@@ -1322,33 +1297,36 @@
                         justifyContent: field.justifyContent || "center"
                     }));
 
-                    await logWithProgress(95, "success", `AI 精確對位完成！成功吸色與定位以下 ${fieldsConfig.length} 個對照欄位：`);
+                    await logWithProgress(95, 99, "success", `AI 精確對位完成！成功吸色與定位以下 ${fieldsConfig.length} 個對照欄位：`);
                     
                     fieldsConfig.forEach(async f => {
-                        diagnosticBox.innerHTML += `<div class="log-line log-sub"><span style="color: var(--primary);">[ 95% ]</span> ✦ 欄位 <b>[${f.key}]</b> -> 座標: (${f.top}%, ${f.left}%) | 配色: <span style="color:${f.color}; font-weight:bold; background-color:#f5ede6; padding:2px 6px; border-radius:3px;">${f.color}</span> | 大小: ${f.fontSize}</div>`;
+                        diagnosticBox.innerHTML += `<div class="log-line log-sub"><span style="color: var(--primary); font-weight: bold;">[ 99% ]</span> ✦ 欄位 <b>[${f.key}]</b> -> 座標: (${f.top}%, ${f.left}%) | 配色: <span style="color:${f.color}; font-weight:bold; background-color:#f5ede6; padding:2px 6px; border-radius:3px;">${f.color}</span> | 大小: ${f.fontSize}</div>`;
                     });
 
-                    await logWithProgress(100, "success", `恭喜！2x2 智慧自適應排版與高精細吸色完全就緒。`);
+                    await logWithProgress(99, 100, "success", `恭喜！實體尺寸與高精細吸色完全就緒。`);
                     showToast('AI 精確排版與對位吸色已完美就緒！', 'success');
                 } else {
                     throw new Error('回傳不合規的 JSON 資料格式。');
                 }
             } catch (err) {
                 console.error(err);
-                
-                await logWithProgress(100, "error", `✗ [自動降級] 被拒/異常（原因: ${err.message}）。本機防破版分層排版已啟用！`);
+                await logWithProgress(95, 100, "error", `✗ [自動安全降級] 接口受限（原因: ${err.message}）。本機防破版分層排版已啟用！`);
                 showToast('已啟用本機安全防破版降級，您可以自由調整對齊位置！', 'success');
-                
-                // 智慧自適應產生欄位
                 generateFallbackFields(csvHeaders);
             }
 
             aiStatus.innerText = '';
+            
+            // 初始化個別文字設定（如果開啟的話）
+            if (editIndividual) {
+                initIndividualConfigs();
+            }
+            
             renderPages();
             validateSteps();
         }
 
-        // 本機預設 6 筆示範名單
+        // 本機預設示範名單
         function loadDemoCSVData() {
             rawData = [
                 {'姓名': '陳小明', '部門': '行銷企劃處', '員工編號': 'MKT-01'},
@@ -1356,7 +1334,7 @@
                 {'姓名': '黃大洲', '部門': '人力資源部', '員工編號': 'HR-03'},
                 {'姓名': '張美玲', '部門': '財務會計部', '員工編號': 'FIN-04'},
                 {'姓名': 'Alexander Charles III', '部門': '全球策略發展與公共關係處', '員工編號': 'EXEC-05'},
-                {'姓名': '李阿美', '部門': 'IT', '員工編號': 'IT-06'}
+                {'姓名': '李阿美', '部門': 'IT處', '員工編號': 'IT-06'}
             ];
             
             if (fieldsConfig.length === 0) {
@@ -1368,8 +1346,9 @@
             }
         }
 
-        // 預載 A4 多頁 2x2 示範模式
+        // 預載 A4 多頁 2x2 示範模式 (讀取 Step 4 輸入寬高並生成)
         function loadLocalDemo() {
+            updateCardDimensions();
             loadDefaultSvgBackground();
             document.getElementById('diagnostic-log').style.display = 'none';
 
@@ -1381,10 +1360,15 @@
             loadDemoCSVData();
             
             syncSizeInputs();
+            
+            if (editIndividual) {
+                initIndividualConfigs();
+            }
+            
             renderPages();
-            selectField('姓名');
+            selectFieldIndividual('姓名', editIndividual ? 0 : null);
             validateSteps();
-            showToast('已成功導入 6 筆測試名單（支援長姓名與長部門，測試智慧自適應排版）！', 'success');
+            showToast('已成功導入 6 筆測試名單！2x2 智慧分頁部署完畢。', 'success');
         }
 
         // 縮放預覽
@@ -1414,36 +1398,88 @@
             const keyInput = document.getElementById('new-field-key');
             const key = forcedKey ? forcedKey : keyInput.value.trim();
             if (!key) return;
+            
+            // 檢查是否重複
             if (fieldsConfig.find(f => f.key === key)) return;
             
-            fieldsConfig.push({
+            const newFieldObj = {
                 key: key, top: 20, left: 15, width: 70, height: 12,
                 fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft JhengHei', sans-serif", fontSize: '18px', 
                 fontWeight: 'normal', letterSpacing: '0px', lineHeight: '1.2',
                 color: '#3d423e', justifyContent: 'center'
-            });
+            };
+
+            fieldsConfig.push(newFieldObj);
+            
+            if (editIndividual) {
+                individualConfigs.forEach(cfgList => {
+                    cfgList.push(JSON.parse(JSON.stringify(newFieldObj)));
+                });
+            }
+
             if(!forcedKey) keyInput.value = '';
             
             if (triggerRender) {
                 renderPages();
-                selectField(key);
+                selectFieldIndividual(key, editIndividual ? 0 : null);
             }
         }
 
         function deleteField(key, e) {
             if(e) e.stopPropagation();
             fieldsConfig = fieldsConfig.filter(f => f.key !== key);
-            if (selectedKey === key) selectedKey = null;
+            if (editIndividual) {
+                individualConfigs.forEach((cfgList, idx) => {
+                    individualConfigs[idx] = cfgList.filter(f => f.key !== key);
+                });
+            }
+            if (selectedKey === key) {
+                selectedKey = null;
+                selectedCardIndex = null;
+            }
             renderPages();
         }
 
-        function selectField(key) {
+        function deleteFieldIndividual(key, cardIndex, e) {
+            if(e) e.stopPropagation();
+            if (individualConfigs[cardIndex]) {
+                individualConfigs[cardIndex] = individualConfigs[cardIndex].filter(f => f.key !== key);
+            }
+            if (selectedKey === key && selectedCardIndex === cardIndex) {
+                selectedKey = null;
+                selectedCardIndex = null;
+            }
+            renderPages();
+        }
+
+        // 智慧選擇個別欄位屬性
+        function selectFieldIndividual(key, cardIndex) {
             selectedKey = key;
+            selectedCardIndex = cardIndex;
+
             document.querySelectorAll('.text-layer').forEach(el => {
-                if (el.dataset.key === key) el.classList.add('selected');
-                else el.classList.remove('selected');
+                const elKey = el.dataset.key;
+                const elIdx = parseInt(el.dataset.cardIndex);
+                if (editIndividual) {
+                    if (elKey === key && elIdx === cardIndex) el.classList.add('selected');
+                    else el.classList.remove('selected');
+                } else {
+                    if (elKey === key && elIdx === 0) el.classList.add('selected');
+                    else el.classList.remove('selected');
+                }
             });
-            const cfg = fieldsConfig.find(f => f.key === key);
+
+            // 抓取樣式填充控制台
+            let cfg = null;
+            if (editIndividual && cardIndex !== null) {
+                const cardCfg = individualConfigs[cardIndex];
+                if (cardCfg) {
+                    cfg = cardCfg.find(f => f.key === key);
+                }
+            } else {
+                cfg = fieldsConfig.find(f => f.key === key);
+            }
+
             if (cfg) {
                 document.getElementById('font-family').value = cfg.fontFamily;
                 document.getElementById('font-size').value = parseInt(cfg.fontSize) || 16;
@@ -1457,21 +1493,32 @@
 
         function updateSelectedStyle(property, value) {
             if (!selectedKey) return;
-            const cfg = fieldsConfig.find(f => f.key === selectedKey);
-            if (cfg) {
-                cfg[property] = value;
-                renderPages(); // 即時重繪，套用最新縮放
+
+            if (editIndividual && selectedCardIndex !== null) {
+                // 僅編輯單一卡片
+                const cardCfg = individualConfigs[selectedCardIndex];
+                if (cardCfg) {
+                    const field = cardCfg.find(f => f.key === selectedKey);
+                    if (field) {
+                        field[property] = value;
+                    }
+                }
+            } else {
+                // 批次全域同步修改
+                const cfg = fieldsConfig.find(f => f.key === selectedKey);
+                if (cfg) {
+                    cfg[property] = value;
+                }
             }
+            renderPages(); // 即時重繪頁面
         }
 
-        // 2x2 多頁自動分頁引擎（含「單張自適應字級微縮」與「垂直美感中齊流」）
+        // 2x2 多頁自動分頁引擎（含「絕對定位硬性對位」與「個別文字設定」）
         function renderPages() {
             const container = document.getElementById('pages-container');
             container.innerHTML = '';
             const cardsPerPage = 4; // 2x2
             
-            const layoutMode = document.getElementById('layout-mode').value;
-
             let dataList = [];
             if (rawData.length > 0) {
                 dataList = rawData;
@@ -1485,12 +1532,14 @@
                 });
             }
 
+            // 初始化個別文字設定長度
+            if (editIndividual && individualConfigs.length !== dataList.length) {
+                initIndividualConfigs();
+            }
+
             let currentPageEl = null;
             let currentWrapper = null;
             const currentZoom = parseFloat(document.getElementById('zoom-slider').value) || 0.7;
-
-            // 計算卡片的物理高寬度
-            const cardWidthPx = (cardWidthMm / 10) * 37.7952755906; // cm to px (approx)
 
             dataList.forEach((item, index) => {
                 if (index % cardsPerPage === 0) {
@@ -1512,121 +1561,79 @@
                 cardEl.className = 'id-card';
                 if (currentBgUrl) cardEl.style.backgroundImage = `url(${currentBgUrl})`;
 
-                if (layoutMode === 'smartflow') {
-                    // 【模式三：垂直智慧堆疊流】
-                    // 將所有 active 欄位打包至中央自適應垂直 Auto-Layout 容器中，自動維持居中且高低完美對位
-                    const flowContainer = document.createElement('div');
-                    flowContainer.className = 'smart-flow-container';
-                    flowContainer.style.position = 'absolute';
-                    flowContainer.style.top = '15%';
-                    flowContainer.style.left = '10%';
-                    flowContainer.style.width = '80%';
-                    flowContainer.style.height = '70%';
-                    flowContainer.style.display = 'flex';
-                    flowContainer.style.flexDirection = 'column';
-                    flowContainer.style.justifyContent = 'center'; // 垂直居中
-                    flowContainer.style.alignItems = 'center';     // 水平居中
-                    flowContainer.style.gap = '10px';               // 文字區塊智慧間距
+                // 批次繪製文字欄位
+                fieldsConfig.forEach(fieldDef => {
+                    let cfg = fieldDef;
+                    
+                    // 如果開啟個別文字設定，從獨立組態中撈取對應樣式
+                    if (editIndividual && individualConfigs[index]) {
+                        cfg = individualConfigs[index].find(f => f.key === fieldDef.key) || fieldDef;
+                    }
 
-                    fieldsConfig.forEach(cfg => {
-                        const layer = document.createElement('div');
-                        layer.className = 'smart-flow-item';
-                        layer.style.fontFamily = cfg.fontFamily;
-                        layer.style.fontSize = cfg.fontSize;
-                        layer.style.fontWeight = cfg.fontWeight;
-                        layer.style.letterSpacing = cfg.letterSpacing;
-                        layer.style.lineHeight = cfg.lineHeight;
-                        layer.style.color = cfg.color;
+                    const layer = document.createElement('div');
+                    layer.className = 'text-layer';
+                    layer.dataset.key = cfg.key;
+                    layer.dataset.cardIndex = index;
+
+                    const isCurrentlySelected = editIndividual 
+                        ? (cfg.key === selectedKey && index === selectedCardIndex)
+                        : (cfg.key === selectedKey && index === 0);
+
+                    if (isCurrentlySelected) {
+                        layer.classList.add('selected');
+                    }
+
+                    layer.style.top = cfg.top + '%';
+                    layer.style.left = cfg.left + '%';
+                    layer.style.width = cfg.width + '%';
+                    layer.style.height = cfg.height + '%';
+                    layer.style.fontFamily = cfg.fontFamily;
+                    layer.style.fontSize = cfg.fontSize;
+                    layer.style.fontWeight = cfg.fontWeight;
+                    layer.style.letterSpacing = cfg.letterSpacing;
+                    layer.style.lineHeight = cfg.lineHeight;
+                    layer.style.color = cfg.color;
+                    layer.style.justifyContent = cfg.justifyContent;
+                    
+                    layer.innerText = item[cfg.key] !== undefined ? item[cfg.key] : `[${cfg.key}]`;
+
+                    // 控制拖曳與縮放：
+                    // 在同步模式下：僅開放第一張卡片（Index 0）進行控制拖曳，操作將自動即時同步全部。
+                    // 在個別編輯模式下：所有卡片全部解鎖控制，供您自由調整與對位。
+                    const canControl = (index === 0 || editIndividual);
+                    if (canControl) {
+                        layer.addEventListener('mousedown', (e) => startDragOrResize(e, cfg, layer, cardEl, index));
                         
-                        const textContent = item[cfg.key] !== undefined ? item[cfg.key] : `[${cfg.key}]`;
-                        layer.innerText = textContent;
+                        const handle = document.createElement('div');
+                        handle.className = 'resize-handle';
+                        layer.appendChild(handle);
 
-                        // 智慧字級縮放微調
-                        const maxTextWidth = cardWidthPx * 0.75;
-                        const textLengthEst = textContent.length * (parseInt(cfg.fontSize) * 0.7); 
-                        if (textLengthEst > maxTextWidth) {
-                            const scale = maxTextWidth / textLengthEst;
-                            const newSize = Math.max(10, Math.floor(parseInt(cfg.fontSize) * scale));
-                            layer.style.fontSize = newSize + 'px';
-                        }
-
-                        flowContainer.appendChild(layer);
-                    });
-
-                    cardEl.appendChild(flowContainer);
-
-                } else {
-                    // 【模式一與二：絕對定位排版】
-                    fieldsConfig.forEach(cfg => {
-                        const layer = document.createElement('div');
-                        layer.className = 'text-layer';
-                        layer.dataset.key = cfg.key;
-                        if (cfg.key === selectedKey) layer.classList.add('selected');
-
-                        layer.style.top = cfg.top + '%';
-                        layer.style.left = cfg.left + '%';
-                        layer.style.width = cfg.width + '%';
-                        layer.style.height = cfg.height + '%';
-                        layer.style.fontFamily = cfg.fontFamily;
-                        layer.style.fontWeight = cfg.fontWeight;
-                        layer.style.letterSpacing = cfg.letterSpacing;
-                        layer.style.lineHeight = cfg.lineHeight;
-                        layer.style.color = cfg.color;
-                        layer.style.justifyContent = cfg.justifyContent;
-                        
-                        const textContent = item[cfg.key] !== undefined ? item[cfg.key] : `[${cfg.key}]`;
-                        layer.innerText = textContent;
-
-                        // 【模式二：單張字級縮放 (等比微縮引擎)】
-                        if (layoutMode === 'autofit') {
-                            const canvas = document.createElement('canvas');
-                            const ctx = canvas.getContext('2d');
-                            ctx.font = `${cfg.fontWeight} ${cfg.fontSize} ${cfg.fontFamily}`;
-                            
-                            let currentSize = parseInt(cfg.fontSize);
-                            let textWidth = ctx.measureText(textContent).width;
-                            const maxAllowedWidth = (cfg.width / 100) * cardWidthPx;
-
-                            // 智慧縮小迴圈，防止折行
-                            while (textWidth > maxAllowedWidth && currentSize > 8) {
-                                currentSize -= 0.5;
-                                ctx.font = `${cfg.fontWeight} ${currentSize}px ${cfg.fontFamily}`;
-                                textWidth = ctx.measureText(textContent).width;
+                        const delBtn = document.createElement('div');
+                        delBtn.className = 'delete-btn';
+                        delBtn.innerText = '×';
+                        delBtn.onclick = (e) => {
+                            e.stopPropagation();
+                            if (editIndividual) {
+                                deleteFieldIndividual(cfg.key, index, e);
+                            } else {
+                                deleteField(cfg.key, e);
                             }
-                            layer.style.fontSize = currentSize + 'px';
-                        } else {
-                            // 靜態定位
-                            layer.style.fontSize = cfg.fontSize;
-                        }
+                        };
+                        layer.appendChild(delBtn);
+                    }
 
-                        // 僅第一張卡片提供拖曳控制
-                        if (index === 0) {
-                            layer.addEventListener('mousedown', (e) => startDragOrResize(e, cfg, layer, cardEl));
-                            
-                            const handle = document.createElement('div');
-                            handle.className = 'resize-handle';
-                            layer.appendChild(handle);
-
-                            const delBtn = document.createElement('div');
-                            delBtn.className = 'delete-btn';
-                            delBtn.innerText = '×';
-                            delBtn.onclick = (e) => deleteField(cfg.key, e);
-                            layer.appendChild(delBtn);
-                        }
-
-                        cardEl.appendChild(layer);
-                    });
-                }
+                    cardEl.appendChild(layer);
+                });
 
                 currentPageEl.appendChild(cardEl);
             });
             toggleCropLines(); 
         }
 
-        function startDragOrResize(e, cfg, layer, cardEl) {
+        function startDragOrResize(e, cfg, layer, cardEl, cardIndex) {
             if(e.target.classList.contains('delete-btn')) return;
             e.stopPropagation();
-            selectField(cfg.key);
+            selectFieldIndividual(cfg.key, editIndividual ? cardIndex : null);
 
             const isResize = e.target.classList.contains('resize-handle');
             const cardRect = cardEl.getBoundingClientRect();
@@ -1654,6 +1661,7 @@
                     cfg.top = Math.max(0, Math.min(98, newTopPct));
                 }
 
+                // 如果是同步模式，即時重繪其餘卡片
                 renderPages();
             }
 
@@ -1664,6 +1672,21 @@
 
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mouseup', onMouseUp);
+        }
+
+        // 轉換 Google Sheets 分享網址至對應的 CSV 匯出連結
+        function convertSheetUrlToCsv(url) {
+            if (!url) return "";
+            if (url.includes("[docs.google.com/spreadsheets](https://docs.google.com/spreadsheets)")) {
+                if (url.includes("/pub?")) {
+                    return url;
+                }
+                const matches = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+                if (matches && matches[1]) {
+                    return `https://docs.google.com/spreadsheets/d/${matches[1]}/export?format=csv`;
+                }
+            }
+            return url;
         }
     </script>
 </body>
