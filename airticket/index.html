@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>個人機票監控與查詢系統 (RWD雲端版 v0.1.2)</title>
+    <title>個人機票監控與查詢系統 (RWD雲端版 v0.1.3)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/zh-tw.js"></script>
+    
     <style>
         html { overflow-y: scroll; }
         ::-webkit-scrollbar { width: 6px; }
@@ -34,6 +36,61 @@
             color: #ef4444;
             font-weight: bold;
         }
+
+        /* 2. 深度客製化 Flatpickr 深色日曆 UI 樣式，完美對齊網頁主題 */
+        .flatpickr-calendar {
+            background: #1e293b !important; /* 契合 bg-slate-800 */
+            border: 1px solid #334155 !important; /* border-slate-700 */
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.4) !important;
+            border-radius: 16px !important;
+            font-family: inherit !important;
+        }
+        .flatpickr-calendar.hasWeeks .flatpickr-days {
+            border-left: 1px solid #334155 !important;
+        }
+        .flatpickr-months .flatpickr-month {
+            background: #1e293b !important;
+            color: #f8fafc !important;
+        }
+        .flatpickr-current-month .flatpickr-monthDropdown-months {
+            background: #1e293b !important;
+            color: #f8fafc !important;
+        }
+        .flatpickr-current-month input.cur-year {
+            color: #f8fafc !important;
+        }
+        .flatpickr-weekdays {
+            background: #1e293b !important;
+        }
+        span.flatpickr-weekday {
+            color: #94a3b8 !important; /* text-slate-400 */
+            font-weight: 600 !important;
+        }
+        .flatpickr-day {
+            color: #e2e8f0 !important; /* text-slate-200 */
+            border-radius: 8px !important;
+        }
+        .flatpickr-day:hover, .flatpickr-day:focus {
+            background: #334155 !important; /* text-slate-700 */
+            border-color: #475569 !important;
+            color: #ffffff !important;
+        }
+        .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange {
+            background: #3b82f6 !important; /* bg-blue-500 */
+            border-color: #3b82f6 !important;
+            color: #ffffff !important;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5) !important;
+        }
+        .flatpickr-day.flatpickr-disabled, .flatpickr-day.flatpickr-disabled:hover {
+            color: #475569 !important; /* text-slate-600 */
+            background: transparent !important;
+        }
+        .flatpickr-day.prevMonthDay, .flatpickr-day.nextMonthDay {
+            color: #475569 !important;
+        }
+        .flatpickr-calendar .arrowUp, .flatpickr-calendar .arrowDown {
+            border-bottom-color: #1e293b !important;
+        }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased relative">
@@ -41,12 +98,12 @@
     <div class="w-full md:absolute md:top-4 md:right-4 z-50 px-4 pt-4 md:pt-0 flex justify-center md:justify-end">
         <div class="bg-slate-800/60 border border-slate-700/60 px-3.5 py-1.5 rounded-full flex items-center space-x-3 text-xs text-slate-300 font-medium backdrop-blur-md shadow-md">
             <span class="bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/30 font-semibold">
-                v0.1.2
+                v0.1.3
             </span>
             <span class="text-slate-750">|</span>
-            <span class="flex items-center text-slate-400 font-mono">
+            <span class="flex items-center text-slate-450 font-mono">
                 <i class="fa-regular fa-clock mr-1.5 text-slate-500"></i>
-                <span>2026|07|16|09|43</span>
+                <span>2026.07.16.09.43</span>
             </span>
         </div>
     </div>
@@ -196,15 +253,11 @@
         const CLOUD_JSON_ID = "bb3eb31191fc163c4573"; 
         const CLOUD_API_URL = `https://api.npoint.io/${CLOUD_JSON_ID}`;
 
-        // 1. 深度新增：全日本主流/二線機場 + 台灣主要機場
         const airports = [
-            // 台灣主要起飛機場
             { code: 'TPE', city: '台北', name: '桃園國際機場', country: '台灣' },
             { code: 'TSA', city: '台北', name: '松山機場', country: '台灣' },
             { code: 'KHH', city: '高雄', name: '小港國際機場', country: '台灣' },
             { code: 'TXG', city: '台中', name: '台中國際機場', country: '台灣' },
-            
-            // 日本全面覆蓋 (主流 + 區域主要機場)
             { code: 'NRT', city: '東京', name: '成田國際機場', country: '日本' },
             { code: 'HND', city: '東京', name: '羽田國際機場', country: '日本' },
             { code: 'KIX', city: '大阪', name: '關西國際機場', country: '日本' },
@@ -219,18 +272,14 @@
             { code: 'HKD', city: '函館', name: '函館機場', country: '日本' }
         ];
 
-        // 2. 精準更新：2026 年（今年）確定之台灣國定假日（包含彈性調整放假區間）
         const taiwanHolidays2026 = [
-            "2026-01-01", // 開國紀念日 (元旦)
-            "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19", "2026-02-20", "2026-02-21", "2026-02-22", // 農曆春節連假 (除夕至初五)
-            "2026-02-27", "2026-02-28", "2026-03-01", // 和平紀念日連假
-            "2026-04-03", "2026-04-04", "2026-04-05", "2026-04-06", // 兒童節與清明掃墓節連假
-            "2026-06-19", "2026-06-20", "2026-06-21", // 端午節連假
-            "2026-09-25", "2026-09-26", "2026-09-27", // 中秋節連假
-            "2026-10-10", "2026-10-11", "2026-10-12"  // 國慶日連假
+            "2026-01-01", "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19", 
+            "2026-02-20", "2026-02-21", "2026-02-22", "2026-02-27", "2026-02-28", 
+            "2026-03-01", "2026-04-03", "2026-04-04", "2026-04-05", "2026-04-06", 
+            "2026-06-19", "2026-06-20", "2026-06-21", "2026-09-25", "2026-09-26", 
+            "2026-09-27", "2026-10-10", "2026-10-11", "2026-10-12"
         ];
 
-        // 3. 全面追加：所有直飛台日的知名主流與廉價航空公司
         const airlines = [
             { name: '長榮航空', code: 'BR', basePrice: 12500, logoColor: 'bg-emerald-600' },
             { name: '中華航空', code: 'CI', basePrice: 12000, logoColor: 'bg-blue-600' },
@@ -398,7 +447,6 @@
 
         let currentSearchData = null;
 
-        // 產生購買網址連結的小工具
         function generateSearchUrl(dep, arr, date) {
             return `https://www.google.com/travel/flights?q=Flights%20to%20${arr}%20from%20${dep}%20on%20${date}`;
         }
