@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>個人機票監控與查詢系統 (RWD雲端版 v0.1.1)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/zh-tw.js"></script>
+    <style>
+        html { overflow-y: scroll; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        
+        /* 國定假日日曆標記 */
+        .holiday-marker {
+            background: #fee2e2 !important;
+            color: #ef4444 !important;
+            border-radius: 50%;
+            position: relative;
+        }
+        .holiday-marker::after {
+            content: '假';
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 8px;
+            color: #ef4444;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased relative">
+
+    <div class="w-full md:absolute md:top-4 md:right-4 z-50 px-4 pt-4 md:pt-0 flex justify-center md:justify-end">
+        <div class="bg-slate-800/60 border border-slate-700/60 px-3.5 py-1.5 rounded-full flex items-center space-x-3 text-xs text-slate-300 font-medium backdrop-blur-md shadow-md">
+            <span class="bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/30">
+                v0.1.1
+            </span>
+            <span class="text-slate-650">|</span>
+            <span class="flex items-center text-slate-400 font-mono">
+                <i class="fa-regular fa-clock mr-1.5 text-slate-500"></i>
+                <span id="liveClock">讀取時間中...</span>
+            </span>
+        </div>
+    </div>
+
+    <div class="max-w-6xl mx-auto px-4 py-6 md:py-10">
+        <header class="mb-8 text-center flex flex-col items-center mt-2 md:mt-6">
+            <div class="inline-flex items-center space-x-2 bg-slate-800/80 border border-slate-700 px-4 py-1.5 rounded-full mb-4 transition-all">
+                <span class="relative flex h-2 w-2">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span class="text-xs font-semibold text-slate-300" id="syncStatus">雲端同步：初始化中...</span>
+            </div>
+            
+            <h1 class="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-teal-400 mb-2 flex items-center justify-center">
+                <i class="fa-solid fa-plane-departure mr-3 text-blue-400"></i>個人機票監控與查詢
+            </h1>
+            <p class="text-slate-400 text-xs md:text-sm px-4">搜尋全球超值航班，跨裝置即時同步您的專屬監控清單</p>
+        </header>
+
+        <main class="grid grid-cols-1 gap-6 md:gap-8">
+            
+            <div class="bg-slate-800/90 border border-slate-700/50 rounded-2xl p-5 md:p-6 shadow-xl backdrop-blur-md">
+                
+                <div class="flex items-center space-x-4 mb-6">
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="radio" name="tripType" value="oneWay" checked class="hidden peer" onchange="toggleReturnDate()">
+                        <span class="px-4 py-2 rounded-lg text-xs md:text-sm font-medium border border-slate-600 bg-slate-700/30 text-slate-300 peer-checked:bg-blue-600 peer-checked:border-blue-500 peer-checked:text-white transition-all">
+                            單程
+                        </span>
+                    </label>
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="radio" name="tripType" value="roundTrip" class="hidden peer" onchange="toggleReturnDate()">
+                        <span class="px-4 py-2 rounded-lg text-xs md:text-sm font-medium border border-slate-600 bg-slate-700/30 text-slate-300 peer-checked:bg-blue-600 peer-checked:border-blue-500 peer-checked:text-white transition-all">
+                            來回
+                        </span>
+                    </label>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div class="relative">
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">出發地</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-plane-departure absolute left-3 top-3.5 text-slate-500"></i>
+                            <input type="text" id="depInput" placeholder="輸入城市或機場 (如 TPE)" 
+                                   class="w-full bg-slate-900 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-white focus:outline-none focus:border-blue-500 transition-all text-sm"
+                                   oninput="searchAirport('dep')" autocomplete="off">
+                        </div>
+                        <div id="depDropdown" class="absolute z-50 left-0 right-0 mt-1 bg-slate-850 border border-slate-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto hidden bg-slate-800"></div>
+                    </div>
+
+                    <div class="relative">
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">目的地</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-plane-arrival absolute left-3 top-3.5 text-slate-500"></i>
+                            <input type="text" id="arrInput" placeholder="輸入城市或機場 (如 NRT)" 
+                                   class="w-full bg-slate-900 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-white focus:outline-none focus:border-blue-500 transition-all text-sm"
+                                   oninput="searchAirport('arr')" autocomplete="off">
+                        </div>
+                        <div id="arrDropdown" class="absolute z-50 left-0 right-0 mt-1 bg-slate-850 border border-slate-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto hidden bg-slate-800"></div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">出發日期</label>
+                        <div class="relative">
+                            <i class="fa-regular fa-calendar-days absolute left-3 top-3.5 text-slate-500"></i>
+                            <input type="text" id="depDate" placeholder="選擇日期" 
+                                   class="w-full bg-slate-900 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-white focus:outline-none focus:border-blue-500 transition-all text-sm cursor-pointer">
+                        </div>
+                    </div>
+
+                    <div id="returnDateCol" class="opacity-30 pointer-events-none transition-all duration-300">
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">回程日期</label>
+                        <div class="relative">
+                            <i class="fa-regular fa-calendar-days absolute left-3 top-3.5 text-slate-500"></i>
+                            <input type="text" id="arrDate" placeholder="選擇日期" 
+                                   class="w-full bg-slate-900 border border-slate-700 rounded-xl py-2.5 pl-10 pr-4 text-white focus:outline-none focus:border-blue-500 transition-all text-sm cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row justify-end gap-3 sm:space-x-4">
+                    <button onclick="clearSearch()" class="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-650 hover:bg-slate-700/50 text-slate-300 text-sm font-semibold transition-all">
+                        清除欄位
+                    </button>
+                    <button onclick="searchFlights()" class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-650 text-white text-sm font-semibold shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center">
+                        <i class="fa-solid fa-magnifying-glass mr-2"></i>搜尋最便宜機票
+                    </button>
+                </div>
+            </div>
+
+            <div id="searchResultSection" class="hidden">
+                <h2 class="text-lg md:text-xl font-bold text-slate-200 mb-4 flex items-center">
+                    <span class="w-2.5 h-5 bg-blue-500 rounded-full mr-2"></span>搜尋結果 (已選最低票價)
+                </h2>
+                <div id="searchResultCard" class="bg-slate-800/50 border border-teal-500/30 rounded-2xl p-5 md:p-6 shadow-lg"></div>
+            </div>
+
+            <div>
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+                    <h2 class="text-lg md:text-xl font-bold text-slate-200 flex items-center">
+                        <span class="w-2.5 h-5 bg-yellow-500 rounded-full mr-2"></span>我釘選的追蹤航班
+                    </h2>
+                    
+                    <div class="flex items-center space-x-2 w-full sm:w-auto justify-between sm:justify-end">
+                        <button onclick="syncFromCloud()" class="bg-slate-800 hover:bg-slate-750 text-xs text-slate-300 px-3 py-2 rounded-lg border border-slate-700 font-medium transition-all flex items-center">
+                            <i class="fa-solid fa-rotate mr-1.5"></i> 手動同步
+                        </button>
+                        <span id="pinnedCount" class="bg-slate-800 text-yellow-400 text-xs px-2.5 py-2 rounded-lg border border-slate-700 font-semibold">
+                            已追蹤 0 個項目
+                        </span>
+                    </div>
+                </div>
+
+                <div class="hidden md:block bg-slate-800/40 border border-slate-700/40 rounded-2xl overflow-hidden shadow-xl">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-800 text-slate-400 uppercase text-xs tracking-wider border-b border-slate-750">
+                                <tr>
+                                    <th class="py-4 px-6">航程資訊</th>
+                                    <th class="py-4 px-6">日期</th>
+                                    <th class="py-4 px-6">起飛/抵達時間</th>
+                                    <th class="py-4 px-6">航空公司</th>
+                                    <th class="py-4 px-6 text-right">追蹤票價</th>
+                                    <th class="py-4 px-6 text-center">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pinnedTableBody" class="divide-y divide-slate-800"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="pinnedMobileContainer" class="block md:hidden grid grid-cols-1 gap-4"></div>
+
+                <div id="emptyState" class="py-12 text-center text-slate-500 bg-slate-800/20 border border-dashed border-slate-700 rounded-2xl">
+                    <i class="fa-solid fa-bookmark text-3xl mb-3 text-slate-700"></i>
+                    <p class="text-sm px-4">目前沒有釘選任何項目。在上方搜尋機票後，點擊「釘選追蹤」即可同步儲存！</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // ==========================================
+        // ⚠️ 請填入您專屬的 npoint ID ⚠️
+        // ==========================================
+        const CLOUD_JSON_ID = "bb3eb31191fc163c4573"; 
+        const CLOUD_API_URL = `https://api.npoint.io/${CLOUD_JSON_ID}`;
+
+        const airports = [
+            { code: 'TPE', city: '台北', name: '桃園國際機場', country: '台灣' },
+            { code: 'TSA', city: '台北', name: '松山機場', country: '台灣' },
+            { code: 'KHH', city: '高雄', name: '小港國際機場', country: '台灣' },
+            { code: 'NRT', city: '東京', name: '成田國際機場', country: '日本' },
+            { code: 'HND', city: '東京', name: '羽田機場', country: '日本' },
+            { code: 'KIX', city: '大阪', name: '關西國際機場', country: '日本' },
+            { code: 'HKG', city: '香港', name: '香港國際機場', country: '香港' },
+            { code: 'ICN', city: '首爾', name: '仁川國際機場', country: '韓國' },
+            { code: 'BKK', city: '曼谷', name: '蘇凡納布機場', country: '泰國' },
+            { code: 'SIN', city: '新加坡', name: '樟宜機場', country: '新加坡' },
+            { code: 'SFO', city: '舊金山', name: '舊金山國際機場', country: '美國' },
+            { code: 'LAX', city: '洛杉磯', name: '洛杉磯國際機場', country: '美國' },
+            { code: 'LHR', city: '倫敦', name: '希斯洛機場', country: '英國' }
+        ];
+
+        const taiwanHolidays2026 = [
+            "2026-01-01", "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19", 
+            "2026-02-20", "2026-02-21", "2026-02-28", "2026-04-03", "2026-04-04", 
+            "2026-06-19", "2026-09-25", "2026-10-10"
+        ];
+
+        let depDatePicker, arrDatePicker;
+        let pinnedFlights = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            initCalendars();
+            startLiveClock(); // 啟動右上角即時時鐘
+            await syncFromCloud();
+        });
+
+        // ⏱️ 右上角即時時鐘邏輯
+        function startLiveClock() {
+            const clockEl = document.getElementById('liveClock');
+            function updateClock() {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const date = String(now.getDate()).padStart(2, '0');
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                clockEl.innerText = `${year}/${month}/${date} ${hours}:${minutes}:${seconds}`;
+            }
+            updateClock();
+            setInterval(updateClock, 1000); // 每秒鐘自動更新一次
+        }
+
+        // 雲端同步：讀取 (GET)
+        async function syncFromCloud() {
+            updateSyncStatus("同步中...", "text-amber-400");
+            try {
+                const response = await fetch(CLOUD_API_URL);
+                if (!response.ok) throw new Error();
+                const data = await response.json();
+                pinnedFlights = Array.isArray(data) ? data : [];
+                localStorage.setItem('pinnedFlights', JSON.stringify(pinnedFlights));
+                renderPinnedList();
+                updateSyncStatus("雲端已同步", "text-emerald-400");
+            } catch (e) {
+                pinnedFlights = JSON.parse(localStorage.getItem('pinnedFlights')) || [];
+                renderPinnedList();
+                updateSyncStatus("本機快取模式", "text-rose-400");
+            }
+        }
+
+        // 雲端同步：儲存 (POST)
+        async function syncToCloud() {
+            updateSyncStatus("儲存至雲端中...", "text-amber-400");
+            try {
+                await fetch(CLOUD_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(pinnedFlights)
+                });
+                updateSyncStatus("雲端同步成功", "text-emerald-400");
+            } catch (e) {
+                updateSyncStatus("雲端存檔失敗", "text-rose-400");
+            }
+        }
+
+        function updateSyncStatus(text, colorClass) {
+            const statusEl = document.getElementById("syncStatus");
+            statusEl.innerText = `雲端同步：${text}`;
+            statusEl.className = `text-xs font-semibold ${colorClass}`;
+        }
+
+        function initCalendars() {
+            const commonConfig = {
+                locale: 'zh_tw',
+                dateFormat: 'Y-m-d',
+                minDate: 'today',
+                onDayCreate: function(dObj, dStr, fp, dayElem) {
+                    const dateStr = formatDateToYYYYMMDD(dayElem.dateObj);
+                    if (taiwanHolidays2026.includes(dateStr)) {
+                        dayElem.classList.add('holiday-marker');
+                        dayElem.setAttribute('title', '台灣國定假日');
+                    }
+                }
+            };
+
+            depDatePicker = flatpickr("#depDate", {
+                ...commonConfig,
+                onChange: function(selectedDates) {
+                    if (selectedDates[0]) {
+                        arrDatePicker.set('minDate', selectedDates[0]);
+                    }
+                }
+            });
+            arrDatePicker = flatpickr("#arrDate", { ...commonConfig });
+        }
+
+        function formatDateToYYYYMMDD(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function toggleReturnDate() {
+            const tripType = document.querySelector('input[name="tripType"]:checked').value;
+            const returnCol = document.getElementById('returnDateCol');
+            if (tripType === 'roundTrip') {
+                returnCol.classList.remove('opacity-30', 'pointer-events-none');
+                arrDatePicker.element.removeAttribute('disabled');
+            } else {
+                returnCol.classList.add('opacity-30', 'pointer-events-none');
+                arrDatePicker.element.setAttribute('disabled', 'true');
+                arrDatePicker.clear();
+            }
+        }
+
+        function searchAirport(type) {
+            const inputId = type === 'dep' ? 'depInput' : 'arrInput';
+            const dropdownId = type === 'dep' ? 'depDropdown' : 'arrDropdown';
+            const inputVal = document.getElementById(inputId).value.trim().toLowerCase();
+            const dropdown = document.getElementById(dropdownId);
+
+            if (!inputVal) {
+                dropdown.classList.add('hidden');
+                return;
+            }
+
+            const matched = airports.filter(item => 
+                item.code.toLowerCase().includes(inputVal) ||
+                item.city.toLowerCase().includes(inputVal) ||
+                item.name.toLowerCase().includes(inputVal) ||
+                item.country.toLowerCase().includes(inputVal)
+            );
+
+            if (matched.length === 0) {
+                dropdown.innerHTML = `<div class="p-3 text-xs text-slate-500">無匹配的機場資訊</div>`;
+            } else {
+                dropdown.innerHTML = matched.map(airport => `
+                    <div onclick="selectAirport('${type}', '${airport.code}')" 
+                         class="p-3 hover:bg-slate-700/70 cursor-pointer flex justify-between items-center transition-all border-b border-slate-750/30">
+                        <div>
+                            <span class="font-bold text-white text-sm">${airport.city} (${airport.code})</span>
+                            <span class="text-xs text-slate-400 block">${airport.name}</span>
+                        </div>
+                        <span class="text-xs bg-slate-700 text-slate-300 px-2 py-0.5 rounded">${airport.country}</span>
+                    </div>
+                `).join('');
+            }
+            dropdown.classList.remove('hidden');
+        }
+
+        function selectAirport(type, code) {
+            const airport = airports.find(a => a.code === code);
+            const inputId = type === 'dep' ? 'depInput' : 'arrInput';
+            const dropdownId = type === 'dep' ? 'depDropdown' : 'arrDropdown';
+            document.getElementById(inputId).value = `${airport.city} (${airport.code})`;
+            document.getElementById(dropdownId).classList.add('hidden');
+        }
+
+        function clearSearch() {
+            document.getElementById('depInput').value = '';
+            document.getElementById('arrInput').value = '';
+            depDatePicker.clear();
+            arrDatePicker.clear();
+            document.getElementById('searchResultSection').classList.add('hidden');
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#depInput') && !e.target.closest('#depDropdown')) {
+                document.getElementById('depDropdown').classList.add('hidden');
+            }
+            if (!e.target.closest('#arrInput') && !e.target.closest('#arrDropdown')) {
+                document.getElementById('arrDropdown').classList.add('hidden');
+            }
+        });
+
+        const airlines = [
+            { name: '長榮航空', code: 'BR', basePrice: 12000, logoColor: 'bg-green-600' },
+            { name: '中華航空', code: 'CI', basePrice: 11000, logoColor: 'bg-blue-600' },
+            { name: '星宇航空', code: 'JX', basePrice: 13500, logoColor: 'bg-amber-700' },
+            { name: '台灣虎航', code: 'IT', basePrice: 6500, logoColor: 'bg-yellow-500' },
+            { name: '樂桃航空', code: 'MM', basePrice: 7000, logoColor: 'bg-pink-600' }
+        ];
+
+        let currentSearchData = null;
+
+        function searchFlights() {
+            const depVal = document.getElementById('depInput').value;
+            const arrVal = document.getElementById('arrInput').value;
+            const depDate = document.getElementById('depDate').value;
+            const arrDate = document.getElementById('arrDate').value;
+            const tripType = document.querySelector('input[name="tripType"]:checked').value;
+
+            if (!depVal || !arrVal || !depDate) {
+                alert('請完整填寫出發地、目的地與出發日期！');
+                return;
+            }
+            if (tripType === 'roundTrip' && !arrDate) {
+                alert('請選擇您的回程日期！');
+                return;
+            }
+
+            const depCode = depVal.match(/\((.*?)\)/)?.[1] || 'TPE';
+            const arrCode = arrVal.match(/\((.*?)\)/)?.[1] || 'NRT';
+
+            const seed = depDate.split('-').reduce((acc, val) => acc + parseInt(val), 0);
+            const selectedAirline = airlines[seed % airlines.length];
+            
+            const isHoliday = taiwanHolidays2026.includes(depDate);
+            let finalPrice = Math.floor(selectedAirline.basePrice * (isHoliday ? 1.4 : 0.85));
+            if (tripType === 'roundTrip') finalPrice = Math.floor(finalPrice * 1.85);
+
+            const hourDep = String(Math.floor(Math.random() * 12) + 6).padStart(2, '0');
+            const minDep = String(Math.floor(Math.random() * 4) * 15).padStart(2, '0');
+            const hourArr = String(parseInt(hourDep) + 3).padStart(2, '0');
+
+            currentSearchData = {
+                id: Date.now(),
+                depCode,
+                arrCode,
+                tripType: tripType === 'oneWay' ? '單程' : '來回',
+                depDate,
+                arrDate: tripType === 'roundTrip' ? arrDate : null,
+                time: `${hourDep}:${minDep} ➔ ${hourArr}:${minDep}`,
+                airline: selectedAirline.name,
+                logoColor: selectedAirline.logoColor,
+                price: finalPrice
+            };
+
+            const resultCard = document.getElementById('searchResultCard');
+            resultCard.innerHTML = `
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-5">
+                    <div class="flex items-start md:items-center space-x-4">
+                        <div class="w-10 h-10 md:w-12 md:h-12 rounded-full ${currentSearchData.logoColor} flex-shrink-0 flex items-center justify-center text-white font-extrabold text-xs md:text-sm">
+                            ${selectedAirline.code}
+                        </div>
+                        <div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="bg-blue-900/50 text-blue-300 text-xxs px-2 py-0.5 rounded font-medium border border-blue-850">${currentSearchData.tripType}</span>
+                                <span class="text-sm md:text-base font-bold text-white">${currentSearchData.depCode} ➔ ${currentSearchData.arrCode}</span>
+                            </div>
+                            <div class="text-xs text-slate-400 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                                <span><i class="fa-solid fa-plane mr-1 text-slate-500"></i> ${currentSearchData.airline}</span>
+                                <span><i class="fa-regular fa-clock mr-1 text-slate-500"></i> ${currentSearchData.time}</span>
+                            </div>
+                            <div class="text-xs text-emerald-400 mt-1 font-semibold flex flex-wrap items-center gap-1.5">
+                                <i class="fa-regular fa-calendar-check text-slate-500"></i> 出發：${currentSearchData.depDate} ${currentSearchData.arrDate ? `| 回程：${currentSearchData.arrDate}` : ''}
+                                ${isHoliday ? '<span class="text-xxs bg-red-950 text-red-400 px-1.5 py-0.5 rounded font-bold border border-red-900/50">遇台灣連假</span>' : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex sm:items-center justify-between md:justify-end gap-6 border-t border-slate-700/50 md:border-0 pt-4 md:pt-0">
+                        <div class="text-left md:text-right">
+                            <span class="text-slate-400 text-xxs md:text-xs block">最便宜含稅價</span>
+                            <span class="text-xl md:text-2xl font-black text-emerald-400">NT$ ${currentSearchData.price.toLocaleString()}</span>
+                        </div>
+                        <button onclick="pinFlight()" class="px-4 py-2.5 md:px-5 md:py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-650 text-slate-950 font-bold shadow-lg text-sm transition-all flex items-center">
+                            <i class="fa-solid fa-thumbtack mr-2"></i>釘選追蹤
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('searchResultSection').classList.remove('hidden');
+        }
+
+        async function pinFlight() {
+            if (!currentSearchData) return;
+            const isExist = pinnedFlights.some(f => 
+                f.depCode === currentSearchData.depCode && 
+                f.arrCode === currentSearchData.arrCode && 
+                f.depDate === currentSearchData.depDate &&
+                f.price === currentSearchData.price
+            );
+            if (isExist) {
+                alert('此航班已在追蹤清單中！');
+                return;
+            }
+            pinnedFlights.push(currentSearchData);
+            await saveAndSync();
+            alert('成功加入釘選，並已推送到所有裝置雲端！');
+        }
+
+        function renderPinnedList() {
+            const tableBody = document.getElementById('pinnedTableBody');
+            const mobileContainer = document.getElementById('pinnedMobileContainer');
+            const emptyState = document.getElementById('emptyState');
+            const pinnedCount = document.getElementById('pinnedCount');
+
+            pinnedCount.innerText = `已追蹤 ${pinnedFlights.length} 個項目`;
+
+            if (pinnedFlights.length === 0) {
+                tableBody.innerHTML = '';
+                mobileContainer.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            pinnedFlights.sort((a, b) => new Date(a.depDate) - new Date(b.depDate));
+
+            // 1. 桌機與平板 (橫式表格)
+            tableBody.innerHTML = pinnedFlights.map(flight => `
+                <tr class="hover:bg-slate-800/30 transition-all">
+                    <td class="py-4 px-6">
+                        <div class="font-bold text-white flex items-center">
+                            <span>${flight.depCode} ➔ ${flight.arrCode}</span>
+                            <span class="ml-2 text-xxs bg-slate-800 border border-slate-700 text-slate-400 px-1.5 py-0.5 rounded scale-90">${flight.tripType}</span>
+                        </div>
+                    </td>
+                    <td class="py-4 px-6 text-slate-300 font-semibold">
+                        <i class="fa-regular fa-calendar mr-1.5 text-slate-500"></i>${flight.depDate}
+                        ${flight.arrDate ? `<span class="block text-xs text-slate-500">回：${flight.arrDate}</span>` : ''}
+                    </td>
+                    <td class="py-4 px-6 text-slate-400 font-mono text-xs">
+                        <i class="fa-regular fa-clock mr-1.5 text-slate-500"></i>${flight.time}
+                    </td>
+                    <td class="py-4 px-6">
+                        <span class="text-xs text-slate-300 border border-slate-700 bg-slate-800/40 px-2 py-1 rounded">
+                            ${flight.airline}
+                        </span>
+                    </td>
+                    <td class="py-4 px-6 text-right font-bold text-emerald-400 text-base">
+                        NT$ ${flight.price.toLocaleString()}
+                    </td>
+                    <td class="py-4 px-6 text-center">
+                        <button onclick="unpinFlight(${flight.id})" class="text-rose-400 hover:text-rose-500 hover:bg-rose-950/30 w-8 h-8 rounded-lg transition-all" title="取消釘選">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            // 2. 手機端 (直立卡片)
+            mobileContainer.innerHTML = pinnedFlights.map(flight => `
+                <div class="bg-slate-800/60 border border-slate-700/50 p-4 rounded-xl shadow-md space-y-3 relative overflow-hidden">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm font-bold text-white">${flight.depCode} ➔ ${flight.arrCode}</span>
+                            <span class="bg-slate-700 text-slate-300 text-xxs px-1.5 py-0.5 rounded">${flight.tripType}</span>
+                        </div>
+                        <button onclick="unpinFlight(${flight.id})" class="text-rose-400 hover:bg-rose-950/30 w-8 h-8 rounded-lg flex items-center justify-center transition-all">
+                            <i class="fa-regular fa-trash-can"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2 text-xs text-slate-300 border-y border-slate-700/40 py-2.5">
+                        <div>
+                            <span class="text-slate-500 block text-xxs uppercase font-semibold">出發日期</span>
+                            <span class="font-semibold"><i class="fa-regular fa-calendar text-slate-500 mr-1"></i>${flight.depDate}</span>
+                            ${flight.arrDate ? `<span class="block text-xxs text-slate-400 mt-0.5">回：${flight.arrDate}</span>` : ''}
+                        </div>
+                        <div>
+                            <span class="text-slate-500 block text-xxs uppercase font-semibold">班機時間</span>
+                            <span class="font-mono text-slate-300"><i class="fa-regular fa-clock text-slate-500 mr-1"></i>${flight.time.replace('➔', '→')}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-1">
+                        <span class="text-xs bg-slate-900 border border-slate-700 text-slate-300 px-2 py-1 rounded">
+                            ${flight.airline}
+                        </span>
+                        <div class="text-right">
+                            <span class="text-slate-500 text-xxs block">追蹤票價</span>
+                            <span class="text-lg font-black text-emerald-400">NT$ ${flight.price.toLocaleString()}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function unpinFlight(id) {
+            pinnedFlights = pinnedFlights.filter(f => f.id !== id);
+            await saveAndSync();
+        }
+
+        async function saveAndSync() {
+            localStorage.setItem('pinnedFlights', JSON.stringify(pinnedFlights));
+            renderPinnedList();
+            await syncToCloud();
+        }
+    </script>
+</body>
+</html>
