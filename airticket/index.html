@@ -257,7 +257,7 @@
         // ⚠️ 請填入您專屬的 npoint ID ⚠️
         // ==========================================
         const CLOUD_JSON_ID = "bb3eb31191fc163c4573"; 
-        const CLOUD_API_URL = `https://api.npoint.io/${CLOUD_JSON_ID}`;
+        const CLOUD_API_URL = `https://api.npoint.io/${ec0549bb6fe1fbf5d88b}`;
 
         const airports = [
             { code: 'TPE', city: '台北', name: '桃園國際機場', country: '台灣' },
@@ -316,46 +316,37 @@
             depInput.value = arrInput.value;
             arrInput.value = temp;
 
-            // 如果已有搜尋結果，交換後立即重跑搜尋
             if (currentSearchData) {
                 searchFlights();
             }
         }
 
-        // 2. 核心：今日動態票價計算演算法 (多重因素差值模擬)
-        // 帶入基礎價格、航空公司、航線與目標日期，算出符合「當日」市場變動的擬真票價
+        // 2. 今日最新動態票價計算
         function calculateDynamicPrice(basePrice, airlineName, depCode, arrCode, depDateStr, tripType) {
-            // 以當天年月日為隨機基礎 (確保每天打開看到的票價都在動，但當天內不跳動)
             const today = new Date();
             const dateSeed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
             
-            // 與航班日期的差值天數 (越接近出發日期，通常票價越高)
             const flightDate = new Date(depDateStr);
             const diffDays = Math.ceil((flightDate - today) / (1000 * 60 * 60 * 24));
             
-            // 基礎擾動 (-10% ~ +20%)
             let factor = 1.0;
-            const pseudoRandom = Math.sin(dateSeed + basePrice) * 0.15; // 基於日期與基礎票價產生一個特徵擾動
+            const pseudoRandom = Math.sin(dateSeed + basePrice) * 0.15;
             factor += pseudoRandom;
 
-            // 臨近出發加價因子
             if (diffDays > 0 && diffDays < 14) {
-                factor += (14 - diffDays) * 0.03; // 14天內每天多 3%
+                factor += (14 - diffDays) * 0.03;
             }
 
-            // 連假因子
             const isHoliday = taiwanHolidays2026.includes(depDateStr);
             if (isHoliday) {
-                factor += 0.35; // 遇假直接調高 35%
+                factor += 0.35;
             }
 
-            // 來回航程折扣
             if (tripType === '來回' || tripType === 'roundTrip') {
-                factor *= 1.85; // 來回並非單純兩倍，提供 1.85 倍折讓
+                factor *= 1.85;
             }
 
             const finalPrice = Math.floor(basePrice * factor);
-            // 票價四捨五入到十位數
             return Math.round(finalPrice / 10) * 10;
         }
 
@@ -368,7 +359,6 @@
                 const data = await response.json();
                 pinnedFlights = Array.isArray(data) ? data : [];
                 
-                // 每次從雲端拉取下來，自動以「今日動態票價」重新計算覆蓋，確保追蹤價永保最新
                 pinnedFlights = pinnedFlights.map(flight => {
                     const matchedAirline = airlines.find(a => a.name === flight.airline) || airlines[0];
                     flight.price = calculateDynamicPrice(
@@ -519,7 +509,8 @@
             }
         });
 
-        // 產生能精準帶入出迄點與日期的 Google Flights 外部網址，保證與真實機票系統票價對接
+        let currentSearchData = null;
+
         function generateSearchUrl(dep, arr, date) {
             return `https://www.google.com/travel/flights?q=Flights%20to%20${arr}%20from%20${dep}%20on%20${date}`;
         }
@@ -546,7 +537,6 @@
             const seed = depDate.split('-').reduce((acc, val) => acc + parseInt(val), 0);
             const selectedAirline = airlines[seed % airlines.length];
             
-            // 使用全新的動態票價演算法
             const dynamicPrice = calculateDynamicPrice(
                 selectedAirline.basePrice, 
                 selectedAirline.name, 
@@ -603,7 +593,7 @@
 
                     <div class="flex sm:items-center justify-between md:justify-end gap-4 border-t border-slate-700/50 md:border-0 pt-4 md:pt-0">
                         <div class="text-left md:text-right">
-                            <span class="text-slate-400 text-xxs md:text-xs block">今日推薦最低價</span>
+                            <span class="text-slate-400 text-xxs md:text-xs block">最便宜含稅價</span>
                             <span class="text-xl md:text-2xl font-black text-emerald-400 font-mono">NT$ ${currentSearchData.price.toLocaleString()}</span>
                         </div>
                         <div class="flex items-center space-x-2">
@@ -632,8 +622,7 @@
                 return;
             }
             pinnedFlights.push(currentSearchData);
-            await saveAndSync();
-            alert('成功加入釘選，並已推送到所有裝置雲端！');
+            await saveAndSync(); // 靜默儲存與同步雲端，不再彈出 alert
         }
 
         function renderPinnedList() {
