@@ -254,9 +254,9 @@
 
     <script>
         // ==========================================
-        // ⚠️ 請填入您專屬的 npoint ID ⚠️
+        // ⚠️ 已配置您專屬的 npoint ID ⚠️
         // ==========================================
-        const CLOUD_JSON_ID = "bb3eb31191fc163c4573"; 
+        const CLOUD_JSON_ID = "ec0549bb6fe1fbf5d88b"; 
         const CLOUD_API_URL = `https://api.npoint.io/${CLOUD_JSON_ID}`;
 
         const airports = [
@@ -308,7 +308,7 @@
             await syncFromCloud();
         });
 
-        // 1. 交換按鈕邏輯
+        // 交換按鈕邏輯
         function swapAirports() {
             const depInput = document.getElementById('depInput');
             const arrInput = document.getElementById('arrInput');
@@ -322,7 +322,7 @@
             }
         }
 
-        // 2. 今日最新動態票價計算
+        // 今日最新動態票價計算
         function calculateDynamicPrice(basePrice, airlineName, depCode, arrCode, depDateStr, tripType) {
             const today = new Date();
             const dateSeed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
