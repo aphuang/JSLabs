@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>個人機票監控與查詢系統 (RWD雲端版 v0.1.4)</title>
+    <title>個人機票監控與查詢系統 (RWD雲端版 v0.1.5)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -98,12 +98,12 @@
     <div class="w-full md:absolute md:top-4 md:right-4 z-50 px-4 pt-4 md:pt-0 flex justify-center md:justify-end">
         <div class="bg-slate-800/60 border border-slate-700/60 px-3.5 py-1.5 rounded-full flex items-center space-x-3 text-xs text-slate-300 font-medium backdrop-blur-md shadow-md">
             <span class="bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/30 font-semibold">
-                v0.1.4
+                v0.1.5
             </span>
             <span class="text-slate-750">|</span>
             <span class="flex items-center text-slate-400 font-mono">
                 <i class="fa-regular fa-clock mr-1.5 text-slate-500"></i>
-                <span>2026.07.16.09.55</span>
+                <span>2026.07.16.10.20</span>
             </span>
         </div>
     </div>
@@ -257,7 +257,7 @@
         // ⚠️ 請填入您專屬的 npoint ID ⚠️
         // ==========================================
         const CLOUD_JSON_ID = "bb3eb31191fc163c4573"; 
-        const CLOUD_API_URL = `https://api.npoint.io/${ec0549bb6fe1fbf5d88b}`;
+        const CLOUD_API_URL = `https://api.npoint.io/${CLOUD_JSON_ID}`;
 
         const airports = [
             { code: 'TPE', city: '台北', name: '桃園國際機場', country: '台灣' },
@@ -301,6 +301,7 @@
 
         let depDatePicker, arrDatePicker;
         let pinnedFlights = [];
+        let currentSearchData = null;
 
         document.addEventListener('DOMContentLoaded', async () => {
             initCalendars();
@@ -509,8 +510,6 @@
             }
         });
 
-        let currentSearchData = null;
-
         function generateSearchUrl(dep, arr, date) {
             return `https://www.google.com/travel/flights?q=Flights%20to%20${arr}%20from%20${dep}%20on%20${date}`;
         }
@@ -622,7 +621,7 @@
                 return;
             }
             pinnedFlights.push(currentSearchData);
-            await saveAndSync(); // 靜默儲存與同步雲端，不再彈出 alert
+            await saveAndSync();
         }
 
         function renderPinnedList() {
