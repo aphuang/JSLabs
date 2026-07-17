@@ -11,7 +11,7 @@
   <!-- PapaParse for CSV -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght=300;400;500;700;900&display=swap');
     body {
       font-family: 'Noto Sans TC', sans-serif;
       background-color: #f1f5f9;
@@ -171,8 +171,35 @@
             </span>
             <span class="text-[9px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold">免手動像素級定位</span>
           </div>
-          <p class="text-[10px] text-slate-500 leading-relaxed">
-            上傳您的完稿對照圖後，點擊下方按鈕，AI 將自動辨識字體大小、精確 X/Y 網格座標、字體色碼並將對應欄位放置到位！
+
+          <!-- API Key 輸入與儲存介面 -->
+          <div class="bg-white p-2.5 rounded-lg border border-blue-100 shadow-sm space-y-1.5">
+            <div class="flex items-center justify-between text-[11px] font-bold text-slate-700">
+              <span class="flex items-center gap-1">
+                <i data-lucide="key-round" class="w-3.5 h-3.5 text-blue-500"></i>Gemini API Key 金鑰設定
+              </span>
+              <a href="https://aistudio.google.com/" target="_blank" class="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5">
+                免費申請金鑰 <i data-lucide="external-link" class="w-2.5 h-2.5"></i>
+              </a>
+            </div>
+            <div class="flex gap-1.5">
+              <div class="relative flex-1">
+                <input type="password" id="api-key-input" placeholder="貼上您的 AIzaSy... 金鑰" class="w-full text-xs border border-slate-300 rounded-lg pl-2.5 pr-8 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-slate-50 focus:bg-white transition-all">
+                <button onclick="toggleApiKeyVisibility()" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition" title="切換顯示金鑰">
+                  <i id="api-key-eye-icon" data-lucide="eye" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+              <button onclick="saveApiKey()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition shrink-0 active:scale-95 shadow-sm shadow-blue-100">
+                儲存金鑰
+              </button>
+            </div>
+            <p class="text-[9px] text-slate-400 leading-normal">
+              💡 <strong>安全保障：</strong>本機執行需填入 API Key。儲存後將保留在瀏覽器快取中，絕不上傳至任何外部伺服器。
+            </p>
+          </div>
+
+          <p class="text-[10px] text-slate-500 leading-relaxed pt-1 border-t border-slate-200/50">
+            請點擊下方按鈕，AI 將自動辨識字體大小、精確 X/Y 網格座標、字體色碼並將對應欄位放置到位！
           </p>
           <button id="ai-detect-btn" onclick="runAiAutoPosition()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg text-xs flex items-center justify-center gap-1.5 transition active:scale-98 shadow-sm">
             <i data-lucide="sparkles" class="w-4 h-4 text-amber-300"></i>
@@ -552,10 +579,46 @@
 
     // 記憶快取載入
     function initLocalConfig() {
+      // 載入 Google Sheets 發布網址
       const savedUrl = localStorage.getItem('badge_maker_v3_sheets_url');
       if (savedUrl) {
         document.getElementById('sheets-url').value = savedUrl;
       }
+      
+      // 載入 Gemini API Key
+      const savedKey = localStorage.getItem('gemini_api_key');
+      if (savedKey) {
+        document.getElementById('api-key-input').value = savedKey;
+      }
+    }
+
+    // --- 儲存與管理 API Key ---
+    function saveApiKey() {
+      const input = document.getElementById('api-key-input');
+      const key = input.value.trim();
+      
+      if (!key) {
+        localStorage.removeItem('gemini_api_key');
+        showToast("金鑰已清除！");
+      } else {
+        localStorage.setItem('gemini_api_key', key);
+        showToast("金鑰已成功儲存於瀏覽器本機！");
+      }
+    }
+
+    // 切換 API Key 密碼可見度
+    function toggleApiKeyVisibility() {
+      const input = document.getElementById('api-key-input');
+      const icon = document.getElementById('api-key-eye-icon');
+      
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.setAttribute('data-lucide', 'eye-off');
+      } else {
+        input.type = 'password';
+        icon.setAttribute('data-lucide', 'eye');
+      }
+      lucide.createIcons();
     }
 
     // --- Google Sheets 教學折疊面板 ---
@@ -685,7 +748,7 @@
         refImg.src = refImageData;
         refImg.classList.remove('hidden');
 
-        showToast("完稿對照圖已疊合，您可以點選 AI 排版一鍵定位對齊");
+        showToast("完稿對照圖已疊合，請填入 API 金鑰並進行 AI 排版對齊");
         renderDesignCanvas();
       };
       reader.readAsDataURL(file);
@@ -707,8 +770,25 @@
         showToast("請先上傳完稿對照圖作為 AI 解析參考！", true);
         return;
       }
+
+      // 優先從輸入框讀取，再讀取儲存於本地的 API Key
+      let apiKey = document.getElementById('api-key-input').value.trim();
+      if (!apiKey) {
+        apiKey = localStorage.getItem('gemini_api_key') || '';
+      }
+
+      // 如果依然沒有金鑰，精確引導使用者
+      if (!apiKey) {
+        showToast("請先填入並儲存您的 Gemini API Key！", true);
+        const inputEl = document.getElementById('api-key-input');
+        inputEl.focus();
+        inputEl.classList.add('ring-2', 'ring-rose-500', 'border-rose-500');
+        setTimeout(() => {
+          inputEl.classList.remove('ring-2', 'ring-rose-500', 'border-rose-500');
+        }, 3000);
+        return;
+      }
       
-      const apiKey = ""; // 執行環境會在運行時自動注入 Key
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
       
       const base64Parts = refImageData.split(',');
@@ -792,7 +872,7 @@
           await new Promise(resolve => setTimeout(resolve, delay));
           delay *= 2;
         }
-        throw new Error("API 伺服器忙碌中，請稍後重試。");
+        throw new Error("連線超時。請確認您的 API 金鑰 (API Key) 是否輸入正確且具有 Gemini 2.5 使用權限。");
       };
 
       try {
@@ -1091,29 +1171,6 @@
       const field = fields.find(f => f.id === id);
       if (field) {
         field.key = val;
-        renderDesignCanvas();
-        renderA4Preview();
-      }
-    }
-
-    function updateFieldType(id, val) {
-      const field = fields.find(f => f.id === id);
-      if (field) {
-        field.isCustom = (val === 'custom');
-        renderFieldsList();
-        renderDesignCanvas();
-        renderA4Preview();
-      }
-    }
-
-    function updateFieldText(id, val) {
-      const field = fields.find(f => f.id === id);
-      if (field) {
-        if (field.isCustom) {
-          field.customText = val;
-        } else {
-          field.previewText = val;
-        }
         renderDesignCanvas();
         renderA4Preview();
       }
