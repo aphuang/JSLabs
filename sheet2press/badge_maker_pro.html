@@ -3,1561 +3,789 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI 自動化識別證與桌牌排版系統 v0.6.2 Premium</title>
+  <title>AI 自動化識別證排版系統 v0.3.2</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- PapaParse for CSV parsing -->
+  <!-- PapaParse for CSV -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap');
     body {
       font-family: 'Noto Sans TC', sans-serif;
-      background-color: #f8fafc;
+      background-color: #f1f5f9;
     }
-    /* A4 Preview Styles */
+    /* A4 預覽樣式 */
     .a4-page {
       background: white;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05), 0 2px 5px rgba(0, 0, 0, 0.05);
       position: relative;
       overflow: hidden;
       margin: 0 auto;
       box-sizing: border-box;
     }
-    /* Portrait / Landscape dimension presets */
     .a4-portrait {
       width: 210mm;
       height: 297mm;
-      min-width: 210mm;
-      min-height: 297mm;
-      max-width: 210mm;
-      max-height: 297mm;
     }
     .a4-landscape {
       width: 297mm;
       height: 210mm;
-      min-width: 297mm;
-      min-height: 210mm;
-      max-width: 297mm;
-      max-height: 210mm;
     }
-
-    /* Print styles */
+    /* 列印專用 CSS */
     @media print {
       body {
-        background-color: white !important;
+        background: white !important;
         margin: 0 !important;
         padding: 0 !important;
       }
       .no-print {
         display: none !important;
       }
-      .print-container {
-        display: block !important;
-        width: auto !important;
-        height: auto !important;
-      }
       .a4-page {
-        margin: 0 !important;
-        border: none !important;
         box-shadow: none !important;
-        page-break-after: always !important;
-        page-break-inside: avoid !important;
+        margin: 0 !important;
+        page-break-after: always;
+        border: none !important;
+      }
+      @page {
+        margin: 0;
       }
     }
-
-    /* Custom scrollbars */
-    .custom-scrollbar::-webkit-scrollbar {
+    /* 捲軸美化 */
+    ::-webkit-scrollbar {
       width: 6px;
       height: 6px;
     }
-    .custom-scrollbar::-webkit-scrollbar-track {
-      background: rgba(15, 23, 42, 0.05);
-      border-radius: 999px;
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
     }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: rgba(15, 23, 42, 0.2);
-      border-radius: 999px;
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
     }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: rgba(15, 23, 42, 0.4);
-    }
-
-    /* Dark Console Scrollbar */
-    .dark-scrollbar::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    .dark-scrollbar::-webkit-scrollbar-track {
-      background: rgba(15, 23, 42, 0.3);
-      border-radius: 999px;
-    }
-    .dark-scrollbar::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.15);
-      border-radius: 999px;
-    }
-    .dark-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: rgba(255, 255, 255, 0.3);
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
     }
   </style>
 </head>
 <body class="min-h-screen flex flex-col text-slate-800">
 
-  <!-- Header -->
-  <header class="no-print bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-b border-indigo-900/50 text-white shadow-xl px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 sticky top-0 z-50">
-    <div class="flex items-center space-x-4">
-      <div class="p-2.5 bg-indigo-600/20 border border-indigo-500/30 rounded-xl shadow-inner">
-        <i data-lucide="layout-grid" class="w-8 h-8 text-indigo-400"></i>
+  <!-- 頂部導航列 -->
+  <header class="no-print bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <div class="bg-blue-600 text-white p-2 rounded-lg">
+        <i data-lucide="contact-2" class="w-6 h-6"></i>
       </div>
       <div>
-        <h1 class="text-xl font-bold tracking-wider bg-gradient-to-r from-white via-slate-100 to-indigo-200 bg-clip-text text-transparent flex items-center gap-2">
-          AI 自動化識別證與桌牌排版系統
-          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300">v0.6.2 Premium</span>
+        <h1 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+          AI 自動化識別證排版系統
+          <span class="text-xs bg-blue-100 text-blue-700 font-semibold px-2 py-0.5 rounded-full">v0.3.2 經典穩定版</span>
         </h1>
-        <p class="text-xs text-slate-400">結合 Google Gemini 2.5 Structured JSON Schema 技術的極致排版工作流</p>
+        <p class="text-xs text-slate-500">純前端高效處理 • 支援拖曳排版 • A4 完美對齊直印</p>
       </div>
     </div>
-    
-    <div class="flex items-center space-x-3">
-      <button onclick="window.print()" class="bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white px-4 py-2.5 rounded-xl shadow-lg shadow-indigo-600/15 flex items-center space-x-2 font-medium transition duration-200">
+    <div class="flex items-center gap-3">
+      <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition shadow-sm">
         <i data-lucide="printer" class="w-4 h-4"></i>
-        <span>立即列印 A4 排版</span>
+        立即列印 (A4)
       </button>
     </div>
   </header>
 
-  <!-- Toast Notification System (Replacement for Alert) -->
-  <div id="toast-container" class="no-print fixed top-6 right-6 z-50 flex flex-col space-y-3 pointer-events-none"></div>
-
-  <!-- Main Grid Workspace -->
-  <main class="flex-1 grid grid-cols-1 xl:grid-cols-12 gap-6 p-6 max-w-[1900px] w-full mx-auto">
+  <!-- 主要內容區 -->
+  <main class="flex-1 flex overflow-hidden h-[calc(100vh-73px)]">
     
-    <!-- Left Panel: Configurations & API Controls -->
-    <div class="no-print xl:col-span-4 flex flex-col space-y-6 overflow-y-auto max-h-[calc(100vh-140px)] pr-2 custom-scrollbar">
+    <!-- 左側控制面板 (寬度 40%) -->
+    <section class="no-print w-[420px] shrink-0 border-r border-slate-200 bg-white overflow-y-auto flex flex-col">
       
-      <!-- API Key Setting -->
-      <section class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex flex-col space-y-4 transition hover:shadow-md">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-2.5">
-            <div class="p-1.5 bg-amber-50 rounded-lg text-amber-500">
-              <i data-lucide="key-round" class="w-5 h-5"></i>
-            </div>
-            <h2 class="font-bold text-slate-900 tracking-wide">API 金鑰配置</h2>
-          </div>
-          <span class="text-xs text-amber-600 font-medium bg-amber-50 px-2 py-0.5 rounded-full">Gemini 2.5 Only</span>
-        </div>
-        <div class="space-y-2">
-          <label class="text-xs font-semibold text-slate-500 block">Gemini API Key</label>
-          <div class="relative">
-            <input type="password" id="api-key-input" placeholder="請輸入您個人的 Gemini API 金鑰" class="w-full pl-3 pr-10 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50/50 placeholder-slate-400 transition">
-            <button onclick="toggleApiKeyVisibility()" class="absolute right-3 top-3 text-slate-400 hover:text-slate-600">
-              <i id="api-key-eye-icon" data-lucide="eye" class="w-4 h-4"></i>
-            </button>
-          </div>
-          <p class="text-[11px] text-slate-400">※ 本系統絕不上傳您的金鑰，所有的 AI 識別過程皆直接調用 Google 官方 API 節點進行安全通訊。</p>
-        </div>
-      </section>
-
-      <!-- Image Import (Background & Mockup Design) -->
-      <section class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex flex-col space-y-4 transition hover:shadow-md">
-        <div class="flex items-center space-x-2.5">
-          <div class="p-1.5 bg-blue-50 rounded-lg text-blue-500">
-            <i data-lucide="image" class="w-5 h-5"></i>
-          </div>
-          <h2 class="font-bold text-slate-900 tracking-wide">圖檔素材與範本對照</h2>
+      <!-- 步驟 1: 置入底圖與名單 -->
+      <div class="p-5 border-b border-slate-200">
+        <div class="flex items-center gap-2 mb-4 text-blue-600">
+          <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">1</span>
+          <h2 class="font-bold text-slate-900">載入識別證底圖與資料</h2>
         </div>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Clean Base Badge Image -->
-          <div class="space-y-2">
-            <label class="text-xs font-semibold text-slate-500 block flex items-center justify-between">
-              <span>1. 乾淨卡片底圖 (無文字)</span>
-              <span id="clean-status" class="text-[10px] text-rose-500 font-normal">未載入</span>
-            </label>
-            <div class="relative group border-2 border-dashed border-slate-200 hover:border-indigo-400 rounded-xl p-3 text-center cursor-pointer transition">
-              <input type="file" id="clean-image-loader" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer">
-              <div class="space-y-1">
-                <i data-lucide="upload-cloud" class="w-6 h-6 text-slate-400 mx-auto group-hover:text-indigo-500 transition"></i>
-                <div class="text-[11px] text-slate-600 font-medium">點擊或拖曳底圖</div>
-                <div class="text-[10px] text-slate-400">JPG, PNG (A4等比例)</div>
+        <!-- 底圖上傳 -->
+        <div class="mb-4">
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">選擇識別證底圖 (建議高解析度 JPG/PNG)</label>
+          <div id="drop-zone" class="border-2 border-dashed border-slate-200 hover:border-blue-400 rounded-xl p-4 transition text-center cursor-pointer bg-slate-50">
+            <input type="file" id="bg-upload" class="hidden" accept="image/*">
+            <div id="upload-prompt" class="flex flex-col items-center gap-1">
+              <i data-lucide="image" class="w-8 h-8 text-slate-400"></i>
+              <span class="text-xs text-slate-500">拖曳圖片至此或點擊選取</span>
+            </div>
+            <div id="upload-success" class="hidden flex items-center justify-between gap-2 text-left bg-emerald-50 border border-emerald-200 p-2 rounded-lg">
+              <div class="flex items-center gap-2 overflow-hidden">
+                <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600 shrink-0"></i>
+                <span id="bg-filename" class="text-xs text-emerald-800 font-medium truncate">底圖載入成功</span>
               </div>
-            </div>
-            <div id="clean-image-preview-container" class="hidden relative rounded-xl overflow-hidden border border-slate-100 bg-slate-50 h-28 flex items-center justify-center">
-              <img id="clean-image-preview" src="" class="max-h-full max-w-full object-contain">
-              <button onclick="removeLoadedImage('clean')" class="absolute top-2 right-2 bg-rose-500 hover:bg-rose-600 text-white p-1 rounded-full shadow-lg transition">
-                <i data-lucide="x" class="w-3.5 h-3.5"></i>
-              </button>
-            </div>
-          </div>
-
-          <!-- Mockup with Reference Text Style -->
-          <div class="space-y-2">
-            <label class="text-xs font-semibold text-slate-500 block flex items-center justify-between">
-              <span>2. 設計師完稿對照圖</span>
-              <span id="mockup-status" class="text-[10px] text-rose-500 font-normal">未載入</span>
-            </label>
-            <div class="relative group border-2 border-dashed border-slate-200 hover:border-indigo-400 rounded-xl p-3 text-center cursor-pointer transition">
-              <input type="file" id="mockup-image-loader" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer">
-              <div class="space-y-1">
-                <i data-lucide="image-play" class="w-6 h-6 text-slate-400 mx-auto group-hover:text-indigo-500 transition"></i>
-                <div class="text-[11px] text-slate-600 font-medium">點擊或拖曳對照圖</div>
-                <div class="text-[10px] text-slate-400">包含字型、色彩位置參考</div>
-              </div>
-            </div>
-            <div id="mockup-image-preview-container" class="hidden relative rounded-xl overflow-hidden border border-slate-100 bg-slate-50 h-28 flex items-center justify-center">
-              <img id="mockup-image-preview" src="" class="max-h-full max-w-full object-contain">
-              <button onclick="removeLoadedImage('mockup')" class="absolute top-2 right-2 bg-rose-500 hover:bg-rose-600 text-white p-1 rounded-full shadow-lg transition">
-                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              <button onclick="resetBg(event)" class="text-xs text-slate-400 hover:text-rose-600">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
               </button>
             </div>
           </div>
         </div>
 
-        <!-- Trigger AI Button -->
-        <button id="ai-analyze-btn" disabled onclick="startAIStyleAnalysis()" class="w-full bg-gradient-to-r from-indigo-600 to-indigo-800 hover:from-indigo-500 hover:to-indigo-700 disabled:from-slate-100 disabled:to-slate-100 disabled:text-slate-400 text-white py-3 rounded-xl font-bold text-sm tracking-wider flex items-center justify-center gap-2 shadow-lg transition duration-200 cursor-pointer disabled:cursor-not-allowed">
-          <i data-lucide="wand-2" class="w-4 h-4"></i>
-          <span>一鍵啟動 AI 樣式辨識 (Structured JSON)</span>
-        </button>
-      </section>
-
-      <!-- Layout Parameter Config -->
-      <section class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex flex-col space-y-4 transition hover:shadow-md">
-        <div class="flex items-center space-x-2.5">
-          <div class="p-1.5 bg-emerald-50 rounded-lg text-emerald-500">
-            <i data-lucide="sliders" class="w-5 h-5"></i>
-          </div>
-          <h2 class="font-bold text-slate-900 tracking-wide">A4 排版與裁切線設定</h2>
-        </div>
-
-        <!-- Page Orientation -->
-        <div class="grid grid-cols-2 gap-3">
-          <button id="orient-portrait" onclick="setPageOrientation('portrait')" class="border-2 border-indigo-500 bg-indigo-50/50 text-indigo-700 rounded-xl p-2.5 text-center font-semibold text-xs flex flex-col items-center gap-1.5 transition">
-            <i data-lucide="file-text" class="w-5 h-5"></i>
-            <span>A4 直向縱向 (Portrait)</span>
-          </button>
-          <button id="orient-landscape" onclick="setPageOrientation('landscape')" class="border border-slate-200 text-slate-600 rounded-xl p-2.5 text-center font-semibold text-xs flex flex-col items-center gap-1.5 transition hover:bg-slate-50">
-            <i data-lucide="file-text" class="w-5 h-5 rotate-90"></i>
-            <span>A4 橫向橫版 (Landscape)</span>
-          </button>
-        </div>
-
-        <div class="border-t border-slate-100 pt-3 space-y-3">
-          <div class="flex items-center justify-between">
-            <label class="text-xs font-bold text-slate-700">卡片排列方式 (欄 x 列)</label>
-            <div class="flex items-center space-x-1.5">
-              <input type="number" id="layout-cols" value="2" min="1" max="10" onchange="triggerLayoutRecalculation()" class="w-12 text-center border border-slate-200 rounded-lg py-1 text-xs font-semibold focus:ring-1 focus:ring-indigo-500">
-              <span class="text-xs text-slate-400">×</span>
-              <input type="number" id="layout-rows" value="4" min="1" max="10" onchange="triggerLayoutRecalculation()" class="w-12 text-center border border-slate-200 rounded-lg py-1 text-xs font-semibold focus:ring-1 focus:ring-indigo-500">
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div class="space-y-1">
-              <label class="text-[11px] font-semibold text-slate-500 block">單卡寬度 (mm)</label>
-              <input type="number" id="card-width" value="90" min="20" max="300" step="0.5" onchange="triggerLayoutRecalculation()" class="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500">
-            </div>
-            <div class="space-y-1">
-              <label class="text-[11px] font-semibold text-slate-500 block">單卡高度 (mm)</label>
-              <input type="number" id="card-height" value="54" min="20" max="300" step="0.5" onchange="triggerLayoutRecalculation()" class="w-full border border-slate-200 rounded-lg px-2 py-1.5 text-xs focus:ring-1 focus:ring-indigo-500">
-            </div>
-          </div>
-
-          <div class="grid grid-cols-4 gap-2">
-            <div class="space-y-1">
-              <label class="text-[10px] font-semibold text-slate-400 block">上邊距 (mm)</label>
-              <input type="number" id="margin-top" value="15" min="0" max="100" onchange="triggerLayoutRecalculation()" class="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs">
-            </div>
-            <div class="space-y-1">
-              <label class="text-[10px] font-semibold text-slate-400 block">下邊距 (mm)</label>
-              <input type="number" id="margin-bottom" value="15" min="0" max="100" onchange="triggerLayoutRecalculation()" class="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs">
-            </div>
-            <div class="space-y-1">
-              <label class="text-[10px] font-semibold text-slate-400 block">左邊距 (mm)</label>
-              <input type="number" id="margin-left" value="15" min="0" max="100" onchange="triggerLayoutRecalculation()" class="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs">
-            </div>
-            <div class="space-y-1">
-              <label class="text-[10px] font-semibold text-slate-400 block">右邊距 (mm)</label>
-              <input type="number" id="margin-right" value="15" min="0" max="100" onchange="triggerLayoutRecalculation()" class="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs">
-            </div>
-          </div>
-
-          <div class="flex items-center justify-between border-t border-slate-50 pt-2">
-            <label class="text-xs font-semibold text-slate-600 flex items-center space-x-1.5 cursor-pointer">
-              <input type="checkbox" id="toggle-crop-lines" checked onchange="toggleCropGuidelines(this)" class="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4">
-              <span>顯示裁切虛線 (不影響 A4 列印結果)</span>
-            </label>
-          </div>
-        </div>
-      </section>
-
-      <!-- Member Database Google Sheet / CSV Import -->
-      <section class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex flex-col space-y-4 transition hover:shadow-md">
-        <div class="flex items-center space-x-2.5">
-          <div class="p-1.5 bg-violet-50 rounded-lg text-violet-500">
-            <i data-lucide="database" class="w-5 h-5"></i>
-          </div>
-          <h2 class="font-bold text-slate-900 tracking-wide">人員名單帶入與表格連結</h2>
-        </div>
-
-        <div class="space-y-2">
-          <label class="text-xs font-semibold text-slate-500 block">匯入 CSV 檔案</label>
-          <div class="relative group border border-dashed border-slate-200 hover:border-violet-400 rounded-xl p-3 text-center cursor-pointer transition">
-            <input type="file" id="csv-loader" accept=".csv" class="absolute inset-0 opacity-0 cursor-pointer">
-            <div class="flex items-center justify-center space-x-2">
-              <i data-lucide="file-spreadsheet" class="w-5 h-5 text-slate-400 group-hover:text-violet-500 transition"></i>
-              <span class="text-xs text-slate-600 font-medium group-hover:text-violet-500 transition">上傳 .csv 試算表</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="space-y-1">
-          <div class="flex items-center justify-between">
-            <label class="text-xs font-semibold text-slate-500">或是直接貼上 CSV 內容數據</label>
-            <button onclick="loadSampleCsvData()" class="text-[10px] text-indigo-600 hover:underline">套用測試資料</button>
-          </div>
-          <textarea id="csv-raw-input" rows="3" placeholder="格式：&#10;姓名,部門,職稱,編號&#10;王小明,技術部,資深工程師,A001" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500 placeholder-slate-400 custom-scrollbar"></textarea>
-          <button onclick="parseRawCsvText()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 rounded-lg text-xs font-semibold transition">
-            解析 CSV 數據並載入
-          </button>
-        </div>
-
-        <div id="data-loaded-indicator" class="hidden bg-emerald-50 border border-emerald-100 rounded-xl p-3 text-xs flex items-center justify-between text-emerald-800">
-          <span class="flex items-center gap-1.5">
-            <i data-lucide="check-circle" class="w-4 h-4 text-emerald-500"></i>
-            <span>已成功載入 <strong id="loaded-records-count">0</strong> 筆人員數據</span>
-          </span>
-          <button onclick="clearLoadedRecords()" class="text-[10px] text-rose-600 hover:underline">清除名單</button>
-        </div>
-      </section>
-
-      <!-- Field Coordinate Fine-Tuning List -->
-      <section class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex flex-col space-y-4 transition hover:shadow-md">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-2.5">
-            <div class="p-1.5 bg-rose-50 rounded-lg text-rose-500">
-              <i data-lucide="pencil-ruler" class="w-5 h-5"></i>
-            </div>
-            <h2 class="font-bold text-slate-900 tracking-wide">視覺欄位與精確座標調整</h2>
-          </div>
-          <button onclick="addNewField()" class="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1 font-medium">
-            <i data-lucide="plus" class="w-3.5 h-3.5"></i>新增欄位
-          </button>
-        </div>
-
-        <!-- Coordinates list -->
-        <div id="fields-editor-list" class="space-y-4 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
-          <!-- Dynamically populated field cards -->
-          <div class="text-center text-xs text-slate-400 py-4">無欄位。請載入底圖並執行 AI 辨識或手動新增欄位。</div>
-        </div>
-      </section>
-
-      <!-- Advanced System Settings -->
-      <section class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex flex-col space-y-4 transition hover:shadow-md">
-        <div class="flex items-center space-x-2.5">
-          <div class="p-1.5 bg-slate-100 rounded-lg text-slate-600">
-            <i data-lucide="settings" class="w-5 h-5"></i>
-          </div>
-          <h2 class="font-bold text-slate-900 tracking-wide">高級列印比例補償</h2>
-        </div>
-        <div class="space-y-3">
-          <p class="text-[11px] text-slate-500">※ 如果印表機實際輸出尺寸與毫米規格有些微誤差，您可在這裡進行補償比例微調：</p>
-          <div class="grid grid-cols-2 gap-4">
-            <div class="space-y-1">
-              <label class="text-[11px] font-semibold text-slate-500 block">X軸補償比例 (%)</label>
-              <input type="number" id="scale-compensate-x" value="100.0" step="0.1" onchange="triggerLayoutRecalculation()" class="w-full border border-slate-200 rounded-lg px-2 py-1 text-xs">
-            </div>
-            <div class="space-y-1">
-              <label class="text-[11px] font-semibold text-slate-500 block">Y軸補償比例 (%)</label>
-              <input type="number" id="scale-compensate-y" value="100.0" step="0.1" onchange="triggerLayoutRecalculation()" class="w-full border border-slate-200 rounded-lg px-2 py-1 text-xs">
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Terminal Logs Console (DARK REDESIGNED) -->
-      <section class="bg-[#0b0f19] text-slate-300 border border-slate-800 rounded-2xl p-4 font-mono text-xs shadow-2xl relative flex flex-col h-[320px]">
-        <!-- Terminal Control Bar -->
-        <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3 select-none">
-          <div class="flex items-center space-x-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-rose-500/95 shadow-lg shadow-rose-500/20 inline-block"></span>
-            <span class="w-2.5 h-2.5 rounded-full bg-amber-500/95 shadow-lg shadow-amber-500/20 inline-block"></span>
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500/95 shadow-lg shadow-emerald-500/20 inline-block"></span>
-            <span class="ml-2 font-bold text-slate-500 tracking-wider text-[10px] uppercase">AI ENGINE LOG CONSOLE</span>
-          </div>
-          <div class="flex items-center space-x-3">
-            <span id="ai-status-indicator" class="flex items-center gap-1.5 text-[10px] text-emerald-400 font-semibold bg-emerald-950/40 border border-emerald-900/30 px-2 py-0.5 rounded-full">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> 系統就緒
-            </span>
-            <button onclick="clearConsoleLogs()" class="text-slate-500 hover:text-rose-400 hover:bg-slate-800/40 p-1 rounded transition duration-200" title="清空日誌">
-              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+        <!-- CSV/名單上傳 -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">匯入人員名單 (CSV 格式)</label>
+          <div class="flex gap-2">
+            <input type="file" id="csv-upload" accept=".csv" class="hidden">
+            <button onclick="document.getElementById('csv-upload').click()" class="flex-1 border border-slate-300 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i>
+              選擇 CSV 檔案
+            </button>
+            <button onclick="loadTemplateData()" class="border border-slate-300 hover:bg-slate-50 text-slate-500 px-3 py-2 rounded-lg text-xs font-medium transition">
+              載入範例資料
             </button>
           </div>
+          <div id="csv-status" class="mt-2 text-xs text-slate-500 hidden flex items-center gap-1">
+            <i data-lucide="users" class="w-4 h-4"></i>
+            <span>已成功載入 <strong id="csv-count" class="text-blue-600">0</strong> 筆名單資料</span>
+          </div>
         </div>
-        <!-- Logs body -->
-        <div id="logs-container" class="flex-1 overflow-y-auto space-y-1.5 pr-1 text-slate-300 dark-scrollbar scroll-smooth">
-          <div class="text-emerald-400 font-bold">[SYSTEM] A4 識別證與桌牌自動化排版系統 v0.6.2 Premium 載入完成。</div>
-          <div class="text-slate-400">[INFO] 請載入底圖和名單，開始配置排版！</div>
+      </div>
+
+      <!-- 步驟 2: 文字區塊管理 -->
+      <div class="p-5 border-b border-slate-200 flex-1">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2 text-blue-600">
+            <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">2</span>
+            <h2 class="font-bold text-slate-900">文字區塊與欄位配置</h2>
+          </div>
+          <button onclick="addField()" class="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>新增區塊
+          </button>
         </div>
-      </section>
 
-    </div>
+        <p class="text-xs text-slate-400 mb-4">提示：您可直接點擊右方預報欄位，在識別證畫面上直接「拖曳」定位 X, Y 軸！</p>
 
-    <!-- Right Area: Interactive Editor & Visual Mock Canvas -->
-    <div class="xl:col-span-8 flex flex-col space-y-6">
+        <!-- 欄位列表 -->
+        <div id="fields-container" class="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+          <!-- 欄位卡片動態插入 -->
+        </div>
+      </div>
+
+      <!-- 步驟 3: A4 版面設定 -->
+      <div class="p-5 bg-slate-50">
+        <div class="flex items-center gap-2 mb-4 text-blue-600">
+          <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">3</span>
+          <h2 class="font-bold text-slate-900">A4 紙張與列印版面設定</h2>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">紙張方向</label>
+            <select id="layout-orientation" onchange="updateLayout()" class="w-full text-xs border border-slate-300 rounded-lg p-2 bg-white focus:ring-1 focus:ring-blue-500">
+              <option value="portrait">直向 (Portrait)</option>
+              <option value="landscape">橫向 (Landscape)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">裁切輔助線</label>
+            <select id="layout-crop" onchange="updateLayout()" class="w-full text-xs border border-slate-300 rounded-lg p-2 bg-white focus:ring-1 focus:ring-blue-500">
+              <option value="true">顯示裁切虛線</option>
+              <option value="false">完全隱藏線條</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">橫向卡片數 (欄)</label>
+            <input type="number" id="layout-cols" value="2" min="1" onchange="updateLayout()" class="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">縱向卡片數 (列)</label>
+            <input type="number" id="layout-rows" value="4" min="1" onchange="updateLayout()" class="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-blue-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">邊界留白 (Margin, mm)</label>
+            <input type="number" id="layout-margin" value="10" min="0" onchange="updateLayout()" class="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">卡片間距 (Gap, mm)</label>
+            <input type="number" id="layout-gap" value="2" min="0" onchange="updateLayout()" class="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-blue-500">
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- 右側雙預覽區 (畫布編輯與 A4 排版預覽) -->
+    <section class="flex-1 flex flex-col bg-slate-100 overflow-hidden">
       
-      <!-- Live Card Editor Coordinate calibration Area -->
-      <div class="no-print bg-white rounded-2xl p-5 border border-slate-100 shadow-sm flex flex-col space-y-4">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-2">
-            <div class="p-1.5 bg-indigo-50 text-indigo-500 rounded-lg">
-              <i data-lucide="scaling" class="w-5 h-5"></i>
-            </div>
-            <div>
-              <h2 class="font-bold text-slate-900 tracking-wide">視覺坐標與字型直接校正</h2>
-              <p class="text-[11px] text-slate-500">點擊並拖曳右側底圖上的藍色虛線控制點，可以直接在畫面上直觀校準欄位百分比座標</p>
-            </div>
-          </div>
-          <div class="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600">
-            底圖比例模擬對照區
-          </div>
+      <!-- 切換頁籤 -->
+      <div class="no-print bg-white border-b border-slate-200 px-6 py-2.5 flex items-center justify-between">
+        <div class="flex bg-slate-100 p-1 rounded-lg">
+          <button id="tab-canvas" onclick="switchTab('canvas')" class="px-4 py-1.5 text-xs font-semibold rounded-md transition shadow-sm bg-white text-blue-600">
+            <span class="flex items-center gap-1.5">
+              <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>視覺拖曳設計
+            </span>
+          </button>
+          <button id="tab-a4" onclick="switchTab('a4')" class="px-4 py-1.5 text-xs font-semibold rounded-md transition text-slate-600 hover:text-slate-900">
+            <span class="flex items-center gap-1.5">
+              <i data-lucide="grid" class="w-3.5 h-3.5"></i>A4 列印預覽 (共 <span id="page-count-badge">0</span> 頁)
+            </span>
+          </button>
         </div>
-
-        <!-- Editor canvas preview for visual selection of coordinate points -->
-        <div class="flex flex-col lg:flex-row gap-6 items-center">
-          <!-- Simulated active live card design container -->
-          <div class="relative bg-slate-100 border border-slate-200 rounded-2xl shadow-inner max-w-full flex items-center justify-center overflow-hidden h-[240px] md:h-[300px] w-full" id="visual-interactive-canvas-container">
-            <div id="visual-card-workspace" class="relative bg-white shadow-md rounded border border-slate-200/80 overflow-hidden" style="width: 320px; height: 192px;">
-              <!-- Simulated backing clean graphic inside designer -->
-              <div id="workspace-card-bg" class="absolute inset-0 bg-slate-50 flex items-center justify-center text-xs text-slate-300 select-none">
-                未載入卡片底圖
-              </div>
-              <!-- Text elements overlays for testing coordinates live drag -->
-              <div id="workspace-elements-root" class="absolute inset-0 select-none"></div>
-              <!-- Dynamic Overlay Draggable Target Indicators -->
-              <div id="workspace-handles-root" class="absolute inset-0 z-20 pointer-events-auto"></div>
-            </div>
-          </div>
-
-          <!-- Parameter fine tuner -->
-          <div class="w-full lg:w-72 space-y-3 self-stretch flex flex-col justify-between">
-            <div class="bg-slate-50 rounded-xl p-4 border border-slate-100 text-xs text-slate-600 space-y-2.5 flex-1">
-              <div class="font-bold text-slate-700 flex items-center gap-1.5">
-                <i data-lucide="info" class="w-4 h-4 text-indigo-500"></i>
-                <span>選定欄位微調面板</span>
-              </div>
-              <div class="space-y-2" id="field-finetune-box">
-                <p class="text-slate-400 py-4 text-center">請先點選畫面上或欄位列表中的文字元素，啟用精確細節微調。</p>
-              </div>
-            </div>
-          </div>
+        <div class="text-xs text-slate-500">
+          * 列印時請務必選擇 <strong class="text-blue-600">A4 紙張</strong>，並將邊界設為 <strong class="text-blue-600">無</strong> 或 <strong class="text-blue-600">預設</strong>。
         </div>
       </div>
 
-      <!-- Real A4 preview area -->
-      <div class="flex-1 bg-slate-200/40 rounded-3xl p-6 border border-slate-200/50 shadow-inner flex flex-col items-center justify-start overflow-auto max-h-[calc(100vh-140px)] min-h-[500px]">
-        <div class="no-print w-full max-w-4xl mb-4 flex items-center justify-between">
-          <div class="flex items-center space-x-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
-            <span class="text-xs font-bold text-slate-600">A4 即時排版列印預覽結果 (實際列印效果完全依據此處渲染)</span>
+      <!-- 視窗容器 -->
+      <div class="flex-1 p-8 overflow-y-auto flex justify-center items-start">
+        
+        <!-- 畫籤 1: 視覺拖曳設計介面 -->
+        <div id="view-canvas" class="w-full max-w-md bg-white rounded-2xl p-6 shadow-sm flex flex-col items-center gap-4">
+          <div class="text-center">
+            <h3 class="font-bold text-slate-800 text-sm">單張底圖文字定位</h3>
+            <p class="text-xs text-slate-400 mt-1">選取欄位後，可直接在畫面上拖曳擺放或點擊編輯</p>
           </div>
-          <div class="text-xs font-semibold text-slate-500" id="total-pages-counter">
-            共計 0 頁 | 0 張卡片
-          </div>
-        </div>
 
-        <!-- Simulated printable A4 Sheet canvas frames -->
-        <div id="a4-pages-printable-wrapper" class="space-y-8 flex flex-col items-center">
-          <!-- A4 pages loaded dynamic -->
-          <div class="bg-white border border-slate-300 shadow-xl rounded-xl p-12 text-center text-slate-400 text-sm select-none" style="width: 210mm; height: 297mm; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;">
-            <i data-lucide="file-text" class="w-16 h-16 text-slate-300 animate-pulse"></i>
+          <!-- 視覺化畫布 -->
+          <div id="design-canvas-container" class="relative w-[320px] h-[450px] bg-slate-100 rounded-xl border border-slate-200 overflow-hidden shadow-inner flex items-center justify-center">
+            <!-- 底圖預覽 -->
+            <img id="design-bg-img" src="" class="absolute inset-0 w-full h-full object-cover select-none pointer-events-none hidden">
+            <div id="design-bg-placeholder" class="text-slate-400 text-center p-4">
+              <i data-lucide="contact-2" class="w-12 h-12 mx-auto mb-2 opacity-40"></i>
+              <p class="text-xs font-semibold">尚未載入底圖</p>
+              <p class="text-[10px] opacity-75 mt-1">請在左側載入您的識別證底圖圖片</p>
+            </div>
+            
+            <!-- 文字標籤容器 (拖曳核心) -->
+            <div id="design-labels-overlay" class="absolute inset-0 select-none"></div>
+          </div>
+
+          <!-- 即時微調控制 -->
+          <div class="w-full bg-slate-50 p-3 rounded-xl border border-slate-200 grid grid-cols-2 gap-3 text-xs">
             <div>
-              <p class="font-bold text-slate-600">目前暫無預覽列印頁面</p>
-              <p class="text-xs text-slate-400 mt-1">請於左側載入名單或啟用測試資料，系統將為您智慧分頁與自動定位繪製。</p>
+              <span class="text-slate-500 font-medium">水平位置 (X):</span>
+              <span id="coord-x" class="font-bold text-blue-600">50%</span>
+            </div>
+            <div>
+              <span class="text-slate-500 font-medium">垂直位置 (Y):</span>
+              <span id="coord-y" class="font-bold text-blue-600">50%</span>
             </div>
           </div>
         </div>
+
+        <!-- 畫籤 2: A4 列印預覽 -->
+        <div id="view-a4" class="hidden space-y-8">
+          <!-- A4 紙張動態生成區 -->
+          <div id="a4-pages-container" class="flex flex-col gap-8"></div>
+        </div>
+
       </div>
 
-    </div>
+    </section>
 
   </main>
 
-  <!-- Interactive JavaScript logic -->
   <script>
-    // System Configurations & state
-    let cleanImageBase64 = "";
-    let mockupImageBase64 = "";
-    let cleanImageMime = "";
-    let mockupImageMime = "";
-    
-    let pageOrientation = "portrait"; // portrait or landscape
-    let activeSelectedFieldId = null; // tracking visually selected field
-    let showCropLines = true;
-    
-    // Default system fields mapping metadata initialized to golden ratios
-    let cardFields = [
-      {
-        id: "field-1",
-        fieldName: "姓名",
-        x: 50,
-        y: 45,
-        isCustom: false,
-        customText: "",
-        previewText: "王小明",
-        style: {
-          color: "#1e293b",
-          fontSize: 24,
-          fontWeight: "bold",
-          textAlign: "center",
-          fontFamily: "Noto Sans TC"
-        }
-      },
-      {
-        id: "field-2",
-        fieldName: "部門",
-        x: 50,
-        y: 30,
-        isCustom: false,
-        customText: "",
-        previewText: "科技研發部",
-        style: {
-          color: "#4f46e5",
-          fontSize: 14,
-          fontWeight: "500",
-          textAlign: "center",
-          fontFamily: "Noto Sans TC"
-        }
-      },
-      {
-        id: "field-3",
-        fieldName: "職稱",
-        x: 50,
-        y: 60,
-        isCustom: false,
-        customText: "",
-        previewText: "資深架構師",
-        style: {
-          color: "#475569",
-          fontSize: 13,
-          fontWeight: "normal",
-          textAlign: "center",
-          fontFamily: "Noto Sans TC"
-        }
-      }
+    // --- 系統資料狀態庫 (經典 0.3.2 結構) ---
+    let bgImageData = ''; // 底圖 Data URL
+    let bgFileName = '';
+    let currentTab = 'canvas';
+    let selectedFieldId = null; // 當前被選取進行拖曳/編輯的欄位 ID
+
+    // 預設經典欄位設定
+    let fields = [
+      { id: 'field-1', key: '姓名', x: 50, y: 45, size: 28, color: '#1e293b', weight: 'bold', align: 'center', isCustom: false, customText: '', previewText: '陳小明' },
+      { id: 'field-2', key: '部門', x: 50, y: 56, size: 16, color: '#475569', weight: 'normal', align: 'center', isCustom: false, customText: '', previewText: '設計工作流開發組' },
+      { id: 'field-3', key: '職稱', x: 50, y: 62, size: 14, color: '#64748b', weight: 'normal', align: 'center', isCustom: false, customText: '', previewText: '資深落地師' },
+      { id: 'field-4', key: '編號', x: 50, y: 22, size: 12, color: '#2563eb', weight: 'bold', align: 'center', isCustom: true, customText: 'VIP 通行證', previewText: 'VIP' }
     ];
 
-    // Person table database records
-    let peopleRecords = [
-      { "姓名": "王小明", "部門": "科技研發部", "職稱": "資深架構師", "編號": "RD-001" },
-      { "姓名": "李美婷", "部門": "產品企劃組", "職稱": "核心規劃經理", "編號": "PM-052" },
-      { "姓名": "張俊賢", "部門": "全球市場處", "職稱": "商務戰略總監", "編號": "BD-088" },
-      { "姓名": "陳雅筑", "部門": "視覺設計所", "職稱": "資深創意設計", "編號": "DS-009" }
+    // 預設人員名單
+    let people = [
+      { '姓名': '陳小明', '部門': '設計工作流開發組', '職稱': '資深落地師' },
+      { '姓名': '林美玲', '部門': '行銷推廣部', '職稱': '專案經理' },
+      { '姓名': '張家豪', '部門': '技術研發部', '職稱': '後端工程師' },
+      { '姓名': '黃靜怡', '部門': '人資行政部', '職稱': '行政專員' }
     ];
 
-    // On Load Initializer
+    // 初始化載入
     window.onload = function() {
       lucide.createIcons();
-      refreshUIComponents();
-      logToConsole("系統初始化完成。歡迎使用 A4 識別證與桌牌自動化排版系統 v0.6.2 Premium。", "system");
-      logToConsole("您可以點選「人員名單帶入與表格連結」中的『套用測試資料』來快速體驗排版效果。", "info");
-    };
-
-    // Helper functions for custom premium toasts
-    function showNotification(message, type = "info") {
-      const container = document.getElementById("toast-container");
-      if (!container) return;
-
-      const toast = document.createElement("div");
-      toast.className = `p-4 rounded-xl shadow-xl border flex items-center space-x-3 pointer-events-auto transition duration-300 transform translate-y-2 opacity-0 max-w-sm`;
-      
-      let bg = "bg-white border-slate-100 text-slate-800";
-      let icon = '<i data-lucide="info" class="w-5 h-5 text-indigo-500"></i>';
-      
-      if (type === "success") {
-        bg = "bg-emerald-50 border-emerald-100 text-emerald-900";
-        icon = '<i data-lucide="check-circle" class="w-5 h-5 text-emerald-500"></i>';
-      } else if (type === "warning") {
-        bg = "bg-amber-50 border-amber-100 text-amber-900";
-        icon = '<i data-lucide="alert-triangle" class="w-5 h-5 text-amber-500"></i>';
-      } else if (type === "error") {
-        bg = "bg-rose-50 border-rose-100 text-rose-900";
-        icon = '<i data-lucide="alert-circle" class="w-5 h-5 text-rose-500"></i>';
-      }
-
-      toast.className = `${toast.className} ${bg}`;
-      toast.innerHTML = `
-        <div class="flex-shrink-0">${icon}</div>
-        <div class="text-xs font-semibold leading-normal flex-1">${message}</div>
-      `;
-      
-      container.appendChild(toast);
-      lucide.createIcons();
-
-      // Trigger transition animate
-      setTimeout(() => {
-        toast.classList.remove("translate-y-2", "opacity-0");
-      }, 50);
-
-      // Dismiss after timeout
-      setTimeout(() => {
-        toast.classList.add("translate-y-2", "opacity-0");
-        setTimeout(() => {
-          toast.remove();
-        }, 300);
-      }, 4000);
-    }
-
-    // Toggle Api visibility
-    function toggleApiKeyVisibility() {
-      const input = document.getElementById("api-key-input");
-      const icon = document.getElementById("api-key-eye-icon");
-      if (input.type === "password") {
-        input.type = "text";
-        icon.setAttribute("data-lucide", "eye-off");
-      } else {
-        input.type = "password";
-        icon.setAttribute("data-lucide", "eye");
-      }
-      lucide.createIcons();
-    }
-
-    // Write log line to premium dark console container
-    function logToConsole(message, type = "info") {
-      const container = document.getElementById("logs-container");
-      if (!container) return;
-
-      const logNode = document.createElement("div");
-      logNode.className = "text-[11px] leading-relaxed break-all transition border-l-2 pl-2 my-1";
-      
-      const now = new Date();
-      const timeStr = `[${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}]`;
-
-      if (type === "system") {
-        logNode.className += " border-emerald-500 text-emerald-400 font-semibold";
-        logNode.textContent = `${timeStr} ${message}`;
-      } else if (type === "info") {
-        logNode.className += " border-indigo-400 text-slate-300";
-        logNode.textContent = `${timeStr} ${message}`;
-      } else if (type === "warning") {
-        logNode.className += " border-amber-500 text-amber-300 font-medium";
-        logNode.textContent = `${timeStr} ${message}`;
-      } else if (type === "error") {
-        logNode.className += " border-rose-500 text-rose-400 font-bold";
-        logNode.textContent = `${timeStr} ${message}`;
-      } else if (type === "ai") {
-        logNode.className += " border-violet-500 text-violet-300 font-medium italic";
-        logNode.textContent = `${timeStr} 🤖 AI: ${message}`;
-      }
-
-      container.appendChild(logNode);
-      container.scrollTop = container.scrollHeight;
-    }
-
-    // Clear dark logs console
-    function clearConsoleLogs() {
-      const container = document.getElementById("logs-container");
-      if (container) {
-        container.innerHTML = '<div class="text-slate-500 text-[11px]">[SYSTEM] 日誌快取清除完成。</div>';
-      }
-      showNotification("日誌記錄清除完畢");
-    }
-
-    // Set layout margins orientation presets
-    function setPageOrientation(orientation) {
-      pageOrientation = orientation;
-      const portraitBtn = document.getElementById("orient-portrait");
-      const landscapeBtn = document.getElementById("orient-landscape");
-
-      if (orientation === "portrait") {
-        portraitBtn.className = "border-2 border-indigo-500 bg-indigo-50/50 text-indigo-700 rounded-xl p-2.5 text-center font-semibold text-xs flex flex-col items-center gap-1.5 transition";
-        landscapeBtn.className = "border border-slate-200 text-slate-600 rounded-xl p-2.5 text-center font-semibold text-xs flex flex-col items-center gap-1.5 transition hover:bg-slate-50";
-        
-        // Swap column rows presets for standard setups if user wants A4 Portrait defaults
-        document.getElementById("layout-cols").value = 2;
-        document.getElementById("layout-rows").value = 4;
-      } else {
-        landscapeBtn.className = "border-2 border-indigo-500 bg-indigo-50/50 text-indigo-700 rounded-xl p-2.5 text-center font-semibold text-xs flex flex-col items-center gap-1.5 transition";
-        portraitBtn.className = "border border-slate-200 text-slate-600 rounded-xl p-2.5 text-center font-semibold text-xs flex flex-col items-center gap-1.5 transition hover:bg-slate-50";
-        
-        document.getElementById("layout-cols").value = 3;
-        document.getElementById("layout-rows").value = 2;
-      }
-      
-      logToConsole(`列印版面切換為 ${orientation === "portrait" ? "縱向直版 Portrait" : "橫向橫版 Landscape"}。`, "info");
-      triggerLayoutRecalculation();
-    }
-
-    // Toggle cropping line borders
-    function toggleCropGuidelines(checkbox) {
-      showCropLines = checkbox.checked;
-      logToConsole(`已${showCropLines ? "顯示" : "隱藏"}預覽裁切線。`, "info");
-      triggerLayoutRecalculation();
-    }
-
-    // File Input Listeners base64 encoders
-    document.getElementById("clean-image-loader").addEventListener("change", function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      cleanImageMime = file.type;
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        cleanImageBase64 = event.target.result;
-        
-        document.getElementById("clean-image-preview").src = cleanImageBase64;
-        document.getElementById("clean-image-preview-container").classList.remove("hidden");
-        document.getElementById("clean-status").textContent = "已載入";
-        document.getElementById("clean-status").className = "text-[10px] text-emerald-500 font-bold";
-        
-        // Render inside layout designer viewbox background
-        document.getElementById("workspace-card-bg").style.backgroundImage = `url(${cleanImageBase64})`;
-        document.getElementById("workspace-card-bg").style.backgroundSize = "cover";
-        document.getElementById("workspace-card-bg").style.backgroundPosition = "center";
-        document.getElementById("workspace-card-bg").textContent = "";
-
-        logToConsole("已載入乾淨卡片底圖素材。", "info");
-        checkAnalyzeButtonState();
-        triggerLayoutRecalculation();
-      };
-      reader.readAsDataURL(file);
-    });
-
-    document.getElementById("mockup-image-loader").addEventListener("change", function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      mockupImageMime = file.type;
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        mockupImageBase64 = event.target.result;
-        
-        document.getElementById("mockup-image-preview").src = mockupImageBase64;
-        document.getElementById("mockup-image-preview-container").classList.remove("hidden");
-        document.getElementById("mockup-status").textContent = "已載入";
-        document.getElementById("mockup-status").className = "text-[10px] text-emerald-500 font-bold";
-
-        logToConsole("已載入完稿對照對比參考圖。", "info");
-        checkAnalyzeButtonState();
-      };
-      reader.readAsDataURL(file);
-    });
-
-    // Remove image functions
-    function removeLoadedImage(type) {
-      if (type === "clean") {
-        cleanImageBase64 = "";
-        document.getElementById("clean-image-preview").src = "";
-        document.getElementById("clean-image-preview-container").classList.add("hidden");
-        document.getElementById("clean-status").textContent = "未載入";
-        document.getElementById("clean-status").className = "text-[10px] text-rose-500 font-normal";
-        document.getElementById("clean-image-loader").value = "";
-        
-        document.getElementById("workspace-card-bg").style.backgroundImage = "none";
-        document.getElementById("workspace-card-bg").style.backgroundColor = "";
-        document.getElementById("workspace-card-bg").textContent = "未載入卡片底圖";
-      } else {
-        mockupImageBase64 = "";
-        document.getElementById("mockup-image-preview").src = "";
-        document.getElementById("mockup-image-preview-container").classList.add("hidden");
-        document.getElementById("mockup-status").textContent = "未載入";
-        document.getElementById("mockup-status").className = "text-[10px] text-rose-500 font-normal";
-        document.getElementById("mockup-image-loader").value = "";
-      }
-      checkAnalyzeButtonState();
-      triggerLayoutRecalculation();
-    }
-
-    // Enable/disable analyze trigger based on images upload state
-    function checkAnalyzeButtonState() {
-      const btn = document.getElementById("ai-analyze-btn");
-      if (cleanImageBase64 && mockupImageBase64) {
-        btn.removeAttribute("disabled");
-      } else {
-        btn.setAttribute("disabled", "true");
-      }
-    }
-
-    // Clear CSV / people records
-    function clearLoadedRecords() {
-      peopleRecords = [];
-      document.getElementById("csv-loader").value = "";
-      document.getElementById("csv-raw-input").value = "";
-      document.getElementById("data-loaded-indicator").classList.add("hidden");
-      logToConsole("人員名單已清空。", "warning");
-      triggerLayoutRecalculation();
-    }
-
-    // Paste sample test records
-    function loadSampleCsvData() {
-      const sampleText = `姓名,部門,職稱,編號
-林佳蓉,行銷企劃處,行銷總監,MKT-001
-陳致遠,軟體工程所,資深系統研發,RD-204
-葉美齡,人力資源部,HR經理,HR-012
-施建宏,董事長室,執行特助,CEO-002
-許雅婷,視覺設計組,UIUX設計師,DS-045
-曾冠宇,全球商務課,亞太區代表,BD-051`;
-      document.getElementById("csv-raw-input").value = sampleText;
-      parseRawCsvText();
-    }
-
-    // Read loader csv file
-    document.getElementById("csv-loader").addEventListener("change", function(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      
-      Papa.parse(file, {
-        complete: function(results) {
-          if (results.data && results.data.length > 1) {
-            // First row headers
-            const headers = results.data[0];
-            const list = [];
-            for (let i = 1; i < results.data.length; i++) {
-              const row = results.data[i];
-              if (row.length === headers.length && row.some(cell => cell.trim() !== "")) {
-                const item = {};
-                headers.forEach((h, idx) => {
-                  item[h.trim()] = row[idx].trim();
-                });
-                list.push(item);
-              }
-            }
-            peopleRecords = list;
-            updateCsvLoadStatus();
-            logToConsole(`已成功解析上傳檔案，匯入 ${peopleRecords.length} 筆人員資料。`, "system");
-            triggerLayoutRecalculation();
-          } else {
-            showNotification("CSV檔案格式或內容有誤，請確認格式", "error");
-            logToConsole("CSV 檔案載入失敗：格式無效", "error");
-          }
-        }
-      });
-    });
-
-    // Parse pasted Csv raw lines
-    function parseRawCsvText() {
-      const val = document.getElementById("csv-raw-input").value.trim();
-      if (!val) {
-        showNotification("請貼入有效的 CSV 文字內容數據", "warning");
-        return;
-      }
-
-      Papa.parse(val, {
-        complete: function(results) {
-          if (results.data && results.data.length > 1) {
-            const headers = results.data[0];
-            const list = [];
-            for (let i = 1; i < results.data.length; i++) {
-              const row = results.data[i];
-              if (row.length === headers.length && row.some(cell => cell.trim() !== "")) {
-                const item = {};
-                headers.forEach((h, idx) => {
-                  item[h.trim()] = row[idx].trim();
-                });
-                list.push(item);
-              }
-            }
-            peopleRecords = list;
-            updateCsvLoadStatus();
-            logToConsole(`成功從純文字解析載入 ${peopleRecords.length} 筆人員名單數據。`, "system");
-            triggerLayoutRecalculation();
-          } else {
-            showNotification("CSV文字解析失敗，請確認欄位由逗號分隔", "error");
-          }
-        }
-      });
-    }
-
-    // Refresh CSV load info
-    function updateCsvLoadStatus() {
-      if (peopleRecords.length > 0) {
-        document.getElementById("data-loaded-indicator").classList.remove("hidden");
-        document.getElementById("loaded-records-count").textContent = peopleRecords.length;
-        
-        // Dynamically map field references to CSV headers if match exists
-        const availableKeys = Object.keys(peopleRecords[0]);
-        cardFields.forEach(field => {
-          if (!field.isCustom) {
-            // Find closest matches
-            const matchingHeader = availableKeys.find(key => key.toLowerCase() === field.fieldName.toLowerCase());
-            if (matchingHeader) {
-              field.fieldName = matchingHeader;
-            }
-          }
-        });
-      } else {
-        document.getElementById("data-loaded-indicator").classList.add("hidden");
-      }
-    }
-
-    // AI vision analysis with structured JSON output and exponential backoff retry
-    async function startAIStyleAnalysis() {
-      const apiKey = document.getElementById("api-key-input").value.trim();
-      if (!apiKey) {
-        showNotification("請先輸入您的 Gemini API 金鑰才可執行 AI 辨識功能", "warning");
-        logToConsole("API 金鑰不可為空！請先設定 Key。", "error");
-        return;
-      }
-
-      // Convert loaded images to raw base64 string without data mime descriptors
-      const cleanImgBase64Clean = cleanImageBase64.split(",")[1];
-      const mockupImgBase64Clean = mockupImageBase64.split(",")[1];
-
-      logToConsole("🤖 正在喚醒 AI 視覺核心引擎進行卡面完稿對比分析...", "system");
-      document.getElementById("ai-status-indicator").innerHTML = `
-        <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping"></span> 正在辨識...
-      `;
-      document.getElementById("ai-status-indicator").className = "flex items-center gap-1.5 text-[10px] text-indigo-400 font-semibold bg-indigo-950/40 border border-indigo-900/30 px-2 py-0.5 rounded-full";
-
-      // Design Prompt forcing detailed analysis mapped precisely using schema
-      const systemPrompt = `你是一位專業的 UI/UX 設計分析與前端視覺落地上架大師。
-你將被提供兩張圖：一張是「乾淨的識別證底圖（沒有文字）」，另一張是「設計好的完稿參考圖（內含定位好的參考文字）」。
-請仔細辨識完稿參考圖中所有的【文字欄位】（例如部門、姓名、英文名、職稱、條碼或編號等）。
-
-你必須精確量化與量測出：
-1. 每個文字元素相對於卡片整體的 X 百分比坐標 (0-100% 座標，X 軸代表水平向右)
-2. 每個文字元素相對於卡片整體的 Y 百分比坐標 (0-100% 座標，Y 軸代表垂直向下)
-3. 每個文字元素的 color 十六進位 hex 色碼 (請務必在完稿圖中精準吸取，不得虛報)
-4. 每個文字元素的 fontSize 的 px 像素值 (通常介於 12px ~ 48px，比例請精準對照)
-5. 每個文字元素的 fontWeight (必須為 'normal'、'bold'、'300'、'500'、'700' 或 '900' 之一)
-6. 每個文字元素的 textAlign 對齊 (對齊點基準，必須為 'left', 'center', 'right' 之一)
-7. 每個文字元素的 fontFamily 字體樣式 (如 'Noto Sans TC' 或 'sans-serif')。
-
-你必須回傳一個完全符合 Structured JSON Schema 結構格式。不包含 Markdown 標記 (\`\`\`) 與任何廢話。`;
-
-      const promptText = "請精準分析這兩張圖的文字欄位視覺位置與細節樣式，輸出完全符合結構化 Scheme 的 JSON 物件。第一張圖代表無字底圖，第二張為完稿對比圖。";
-
-      // Gemini 2.5 Structured Schema Payload specification
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-      const payload = {
-        contents: [{
-          parts: [
-            { text: promptText },
-            { inlineData: { mimeType: cleanImageMime || "image/png", data: cleanImgBase64Clean } },
-            { inlineData: { mimeType: mockupImageMime || "image/png", data: mockupImgBase64Clean } }
-          ]
-        }],
-        systemInstruction: {
-          parts: [{ text: systemPrompt }]
-        },
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "OBJECT",
-            properties: {
-              fields: {
-                type: "ARRAY",
-                description: "卡片上分析得到的所有可用文字欄位屬性列表",
-                items: {
-                  type: "OBJECT",
-                  properties: {
-                    fieldName: { type: "STRING", description: "欄位標籤，例如 '姓名', '職稱', '部門', '編號'" },
-                    x: { type: "NUMBER", description: "相對於卡片最左側邊界的水平 X 坐標百分比值 (0 到 100)" },
-                    y: { type: "NUMBER", description: "相對於卡片最上方邊界的垂直 Y 坐標百分比值 (0 到 100)" },
-                    previewText: { type: "STRING", description: "於樣板中識別到的實際範例文字內容" },
-                    style: {
-                      type: "OBJECT",
-                      properties: {
-                        color: { type: "STRING", description: "CSS 文字十六進位 hex 顏色色碼 (例如 #1E293B, #EE4D2D)" },
-                        fontSize: { type: "NUMBER", description: "字體的大小 px 數值" },
-                        fontWeight: { type: "STRING", description: "粗細度。必須為: 'normal', 'bold', '300', '500', '700', '900' 之一" },
-                        textAlign: { type: "STRING", description: "水平對齊方式。必須為: 'left', 'center', 'right' 之一" },
-                        fontFamily: { type: "STRING", description: "字體系列群組名稱" }
-                      },
-                      required: ["color", "fontSize", "fontWeight", "textAlign", "fontFamily"]
-                    }
-                  },
-                  required: ["fieldName", "x", "y", "style"]
-                }
-              }
-            },
-            required: ["fields"]
-          }
-        }
-      };
-
-      // Execution with dynamic exponential backoff and retry (Model Failover Implementation)
-      try {
-        const resultJson = await callGeminiWithExponentialBackoff(url, payload);
-        logToConsole("🤖 成功接收 AI Structured JSON 回應！正在載入高精度欄位座標結構。", "system");
-        
-        if (resultJson.candidates && resultJson.candidates[0].content.parts[0].text) {
-          const rawText = resultJson.candidates[0].content.parts[0].text;
-          const parsedResult = JSON.parse(rawText);
-          
-          if (parsedResult && parsedResult.fields) {
-            // Apply coordinates metadata
-            cardFields = parsedResult.fields.map((f, idx) => ({
-              id: `field-${Date.now()}-${idx}`,
-              fieldName: f.fieldName,
-              x: Number(f.x),
-              y: Number(f.y),
-              isCustom: false,
-              customText: "",
-              previewText: f.previewText || `[${f.fieldName}]`,
-              style: {
-                color: f.style.color || "#000000",
-                fontSize: Number(f.style.fontSize) || 16,
-                fontWeight: f.style.fontWeight || "normal",
-                textAlign: f.style.textAlign || "center",
-                fontFamily: f.style.fontFamily || "Noto Sans TC"
-              }
-            }));
-
-            logToConsole(`🤖 AI 成功辨識出 ${cardFields.length} 個高精度文字定位區塊！`, "ai");
-            cardFields.forEach(f => {
-              logToConsole(`  -> 欄位【${f.fieldName}】X:${f.x}% Y:${f.y}% 大小:${f.style.fontSize}px 顏色碼:${f.style.color}`, "info");
-            });
-
-            showNotification("AI 視覺特徵解析與樣式同步完成！", "success");
-            
-            // Re-render everything
-            refreshUIComponents();
-            triggerLayoutRecalculation();
-          } else {
-            throw new Error("回傳的 JSON 結構格式不符預期規格。");
-          }
-        } else {
-          throw new Error("未接收到有效的候選模型輸出結果。");
-        }
-      } catch (err) {
-        logToConsole(`[ERROR] AI 視覺分析處理發生失敗: ${err.message}`, "error");
-        showNotification("AI 視覺分析失敗，請檢查 API Key 是否有效，或手動手調欄位配置。", "error");
-      } finally {
-        document.getElementById("ai-status-indicator").innerHTML = `
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span> 系統就緒
-        `;
-        document.getElementById("ai-status-indicator").className = "flex items-center gap-1.5 text-[10px] text-emerald-400 font-semibold bg-emerald-950/40 border border-emerald-900/30 px-2 py-0.5 rounded-full";
-      }
-    }
-
-    // Exponential backoff executor for 5 Retries (1s, 2s, 4s, 8s, 16s)
-    async function callGeminiWithExponentialBackoff(url, payload, retries = 5) {
-      let currentAttempt = 0;
-      while (currentAttempt < retries) {
-        try {
-          const response = await fetch(url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify(payload)
-          });
-
-          if (!response.ok) {
-            const errorMsg = await response.text();
-            throw new Error(`HTTP ${response.status}: ${errorMsg}`);
-          }
-
-          return await response.json();
-        } catch (error) {
-          currentAttempt++;
-          if (currentAttempt >= retries) {
-            throw error;
-          }
-          const backoffDelay = Math.pow(2, currentAttempt - 1) * 1000;
-          logToConsole(`[RETRY] 第 ${currentAttempt} 次請求不成功，將自動重試並進行指數避退延遲 ${backoffDelay} 毫秒...`, "warning");
-          await new Promise(resolve => setTimeout(resolve, backoffDelay));
-        }
-      }
-    }
-
-    // Refresh dynamic coordinate editor layout inputs & elements
-    function refreshUIComponents() {
+      initDragAndDrop();
       renderFieldsList();
-      renderWorkspaceCanvas();
+      renderDesignCanvas();
+      renderA4Preview();
+      updateLayout();
     }
 
-    // Render Field controls under left panel
-    function renderFieldsList() {
-      const container = document.getElementById("fields-editor-list");
-      if (!container) return;
+    // --- 畫籤控制與切換 ---
+    function switchTab(tab) {
+      currentTab = tab;
+      
+      const tabCanvas = document.getElementById('tab-canvas');
+      const tabA4 = document.getElementById('tab-a4');
+      const viewCanvas = document.getElementById('view-canvas');
+      const viewA4 = document.getElementById('view-a4');
 
-      container.innerHTML = "";
-      if (cardFields.length === 0) {
-        container.innerHTML = '<div class="text-center text-xs text-slate-400 py-4">無欄位。請載入底圖並執行 AI 辨識或手動新增。</div>';
-        return;
+      if (tab === 'canvas') {
+        tabCanvas.className = "px-4 py-1.5 text-xs font-semibold rounded-md transition shadow-sm bg-white text-blue-600";
+        tabA4.className = "px-4 py-1.5 text-xs font-semibold rounded-md transition text-slate-600 hover:text-slate-900";
+        viewCanvas.classList.remove('hidden');
+        viewA4.classList.add('hidden');
+      } else {
+        tabCanvas.className = "px-4 py-1.5 text-xs font-semibold rounded-md transition text-slate-600 hover:text-slate-900";
+        tabA4.className = "px-4 py-1.5 text-xs font-semibold rounded-md transition shadow-sm bg-white text-blue-600";
+        viewCanvas.classList.add('hidden');
+        viewA4.classList.remove('hidden');
+        // 切換到 A4 預覽時即時更新
+        renderA4Preview();
       }
+    }
 
-      cardFields.forEach(field => {
-        const isActive = activeSelectedFieldId === field.id;
-        const fieldNode = document.createElement("div");
+    // --- 圖片上傳與拖曳區設置 ---
+    function initDragAndDrop() {
+      const dropZone = document.getElementById('drop-zone');
+      const fileInput = document.getElementById('bg-upload');
+
+      dropZone.addEventListener('click', () => {
+        if (!bgImageData) fileInput.click();
+      });
+
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('border-blue-400', 'bg-blue-50/50');
+      });
+
+      dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('border-blue-400', 'bg-blue-50/50');
+      });
+
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('border-blue-400', 'bg-blue-50/50');
+        if (e.dataTransfer.files.length > 0) {
+          handleBgFile(e.dataTransfer.files[0]);
+        }
+      });
+
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+          handleBgFile(e.target.files[0]);
+        }
+      });
+
+      // CSV 上傳監聽
+      document.getElementById('csv-upload').addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+          const file = e.target.files[0];
+          Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+              if (results.data && results.data.length > 0) {
+                people = results.data;
+                document.getElementById('csv-status').classList.remove('hidden');
+                document.getElementById('csv-count').textContent = people.length;
+                renderA4Preview();
+              }
+            }
+          });
+        }
+      });
+    }
+
+    function handleBgFile(file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        bgImageData = event.target.result;
+        bgFileName = file.name;
         
-        // Dynamic outline highlight if active
-        fieldNode.className = `p-3.5 rounded-xl border text-xs space-y-2.5 transition duration-200 ${isActive ? 'bg-indigo-50/50 border-indigo-400 shadow-sm' : 'bg-slate-50/50 border-slate-200 hover:border-slate-300'}`;
-        fieldNode.innerHTML = `
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-              <span class="w-1.5 h-3 rounded bg-indigo-500"></span>
-              <input type="text" value="${field.fieldName}" onchange="updateFieldName('${field.id}', this.value)" class="font-bold text-slate-800 bg-transparent border-b border-dashed border-transparent hover:border-slate-400 focus:border-indigo-500 focus:bg-white px-1 py-0.5 rounded focus:outline-none w-28">
+        document.getElementById('upload-prompt').classList.add('hidden');
+        document.getElementById('upload-success').classList.remove('hidden');
+        document.getElementById('bg-filename').textContent = file.name;
+
+        // 更新視覺畫布底圖
+        const designImg = document.getElementById('design-bg-img');
+        designImg.src = bgImageData;
+        designImg.classList.remove('hidden');
+        document.getElementById('design-bg-placeholder').classList.add('hidden');
+
+        renderA4Preview();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function resetBg(event) {
+      event.stopPropagation();
+      bgImageData = '';
+      bgFileName = '';
+      
+      document.getElementById('bg-upload').value = '';
+      document.getElementById('upload-prompt').classList.remove('hidden');
+      document.getElementById('upload-success').classList.add('hidden');
+
+      const designImg = document.getElementById('design-bg-img');
+      designImg.src = '';
+      designImg.classList.add('hidden');
+      document.getElementById('design-bg-placeholder').classList.remove('hidden');
+
+      renderA4Preview();
+    }
+
+    // --- 範例名單載入 ---
+    function loadTemplateData() {
+      people = [
+        { '姓名': '王大同', '部門': '營運管理部', '職稱': '總監' },
+        { '姓名': '李曉華', '部門': '創意研發部', '職稱': '藝術指導' },
+        { '姓名': '林俊毅', '部門': '商務拓展組', '職稱': '拓展代表' },
+        { '姓名': '周佩芬', '部門': '公共關係部', '職稱': '公關經理' },
+        { '姓名': '吳冠宇', '部門': '數據分析組', '職稱': '工程師' },
+        { '姓名': '徐詩涵', '部門': '視覺設計部', '職稱': '設計師' }
+      ];
+      document.getElementById('csv-status').classList.remove('hidden');
+      document.getElementById('csv-count').textContent = people.length;
+      renderA4Preview();
+    }
+
+    // --- 欄位控制與操作 ---
+    function renderFieldsList() {
+      const container = document.getElementById('fields-container');
+      container.innerHTML = '';
+
+      fields.forEach((field, index) => {
+        const isSelected = field.id === selectedFieldId;
+        const div = document.createElement('div');
+        div.className = `border rounded-xl p-3 text-xs transition duration-200 ${isSelected ? 'border-blue-500 bg-blue-50/50 ring-1 ring-blue-500/20' : 'border-slate-200 hover:border-slate-300'}`;
+        div.onclick = () => selectField(field.id);
+
+        div.innerHTML = `
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-1.5 font-semibold text-slate-800">
+              <span class="w-2 h-2 rounded-full" style="background-color: ${field.color}"></span>
+              <input type="text" value="${field.key}" onchange="updateFieldKey('${field.id}', this.value)" class="bg-transparent font-bold border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none w-20 py-0.5">
             </div>
-            <div class="flex items-center space-x-1">
-              <button onclick="selectFieldItem('${field.id}')" class="p-1 text-slate-400 hover:text-indigo-600 rounded transition" title="選取定位編輯">
-                <i data-lucide="mouse-pointer" class="w-3.5 h-3.5"></i>
-              </button>
-              <button onclick="deleteFieldItem('${field.id}')" class="p-1 text-slate-400 hover:text-rose-600 rounded transition" title="刪除欄位">
-                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            <div class="flex items-center gap-1">
+              <button onclick="deleteField('${field.id}', event)" class="p-1 hover:text-rose-600 rounded">
+                <i data-lucide="trash" class="w-3.5 h-3.5"></i>
               </button>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-2 text-[10px]">
-            <div class="flex items-center space-x-1">
-              <span class="text-slate-400">X(%):</span>
-              <input type="number" value="${field.x}" step="0.5" onchange="updateFieldCoordinate('${field.id}', 'x', this.value)" class="w-14 border border-slate-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-indigo-500">
+          <div class="grid grid-cols-2 gap-2 mt-1.5">
+            <div>
+              <span class="text-[10px] text-slate-400 block mb-0.5">對應類型</span>
+              <select onchange="updateFieldType('${field.id}', this.value)" class="w-full text-[11px] p-1 border rounded bg-white">
+                <option value="data" ${!field.isCustom ? 'selected' : ''}>名單對應</option>
+                <option value="custom" ${field.isCustom ? 'selected' : ''}>自訂固定文字</option>
+              </select>
             </div>
-            <div class="flex items-center space-x-1">
-              <span class="text-slate-400">Y(%):</span>
-              <input type="number" value="${field.y}" step="0.5" onchange="updateFieldCoordinate('${field.id}', 'y', this.value)" class="w-14 border border-slate-200 rounded px-1.5 py-0.5 focus:ring-1 focus:ring-indigo-500">
+            <div>
+              <span class="text-[10px] text-slate-400 block mb-0.5">${field.isCustom ? '自訂內文' : '預覽對照名稱'}</span>
+              <input type="text" value="${field.isCustom ? field.customText : field.previewText}" 
+                onchange="updateFieldText('${field.id}', this.value)" 
+                class="w-full text-[11px] p-1 border rounded focus:ring-1 focus:ring-blue-500">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-1.5 mt-2 pt-2 border-t border-slate-100">
+            <div>
+              <span class="text-[10px] text-slate-400 block">大小 (px)</span>
+              <input type="number" value="${field.size}" onchange="updateFieldStyle('${field.id}', 'size', this.value)" class="w-full text-[11px] p-1 border rounded">
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400 block">顏色</span>
+              <input type="color" value="${field.color}" onchange="updateFieldStyle('${field.id}', 'color', this.value)" class="w-full h-7 p-0.5 border rounded cursor-pointer">
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400 block">對齊</span>
+              <select onchange="updateFieldStyle('${field.id}', 'align', this.value)" class="w-full text-[11px] p-1 border rounded bg-white">
+                <option value="left" ${field.align === 'left' ? 'selected' : ''}>靠左</option>
+                <option value="center" ${field.align === 'center' ? 'selected' : ''}>置中</option>
+                <option value="right" ${field.align === 'right' ? 'selected' : ''}>靠右</option>
+              </select>
             </div>
           </div>
         `;
-        container.appendChild(fieldNode);
+        container.appendChild(div);
       });
-      
       lucide.createIcons();
-      renderFineTunePanel();
     }
 
-    // Render Visual drag designer canvas
-    function renderWorkspaceCanvas() {
-      const parentContainer = document.getElementById("visual-interactive-canvas-container");
-      const workspace = document.getElementById("visual-card-workspace");
-      const rootElements = document.getElementById("workspace-elements-root");
-      const handlesRoot = document.getElementById("workspace-handles-root");
+    function selectField(id) {
+      selectedFieldId = id;
+      renderFieldsList();
       
-      if (!workspace || !rootElements || !handlesRoot) return;
-
-      // Adjust dimensions ratios
-      const layoutWidth = parseFloat(document.getElementById("card-width").value);
-      const layoutHeight = parseFloat(document.getElementById("card-height").value);
-      const ratio = layoutHeight / layoutWidth;
-
-      // Base target fitting sizing within workspace bounds
-      const parentHeight = parentContainer.clientHeight || 280;
-      const fitWidth = 320;
-      const fitHeight = fitWidth * ratio;
-      
-      workspace.style.width = `${fitWidth}px`;
-      workspace.style.height = `${fitHeight}px`;
-
-      rootElements.innerHTML = "";
-      handlesRoot.innerHTML = "";
-
-      // Append text placeholders dynamically inside interactive visual workspace
-      cardFields.forEach(field => {
-        const textNode = document.createElement("div");
-        textNode.style.position = "absolute";
-        textNode.style.left = `${field.x}%`;
-        textNode.style.top = `${field.y}%`;
-        textNode.style.color = field.style.color;
-        textNode.style.fontSize = `${field.style.fontSize * 0.7}px`; // scaled representation helper
-        textNode.style.fontWeight = field.style.fontWeight;
-        textNode.style.textAlign = field.style.textAlign;
-        textNode.style.fontFamily = field.style.fontFamily;
-        textNode.style.transform = `translate(${field.style.textAlign === "center" ? "-50%" : field.style.textAlign === "right" ? "-100%" : "0%"}, -50%)`;
-        textNode.className = `whitespace-nowrap transition-all duration-100 ${activeSelectedFieldId === field.id ? "ring-2 ring-indigo-500 ring-offset-2 rounded px-1.5 py-0.5 bg-white/70" : ""}`;
-        
-        textNode.textContent = field.previewText || `[${field.fieldName}]`;
-        rootElements.appendChild(textNode);
-
-        // Draggable Control node handler overlay
-        const handle = document.createElement("div");
-        handle.style.position = "absolute";
-        handle.style.left = `${field.x}%`;
-        handle.style.top = `${field.y}%`;
-        handle.className = `w-4 h-4 rounded-full border-2 cursor-move -translate-x-1/2 -translate-y-1/2 flex items-center justify-center transition ${activeSelectedFieldId === field.id ? "bg-indigo-600 border-white shadow-lg scale-125 z-30" : "bg-white border-slate-400 hover:bg-indigo-100 shadow"}`;
-        handle.title = `拖曳調整『${field.fieldName}』`;
-
-        // Event listener for desktop dragging coordinates
-        handle.addEventListener("mousedown", function(e) {
-          e.preventDefault();
-          selectFieldItem(field.id);
-          
-          const rect = workspace.getBoundingClientRect();
-          
-          function onMouseMove(moveEvent) {
-            let pxX = moveEvent.clientX - rect.left;
-            let pxY = moveEvent.clientY - rect.top;
-
-            // Constrain boundaries percentages
-            let pctX = Math.round((pxX / rect.width) * 100 * 10) / 10;
-            let pctY = Math.round((pxY / rect.height) * 100 * 10) / 10;
-
-            pctX = Math.max(0, Math.min(100, pctX));
-            pctY = Math.max(0, Math.min(100, pctY));
-
-            field.x = pctX;
-            field.y = pctY;
-
-            updateFieldDataCoordinates(field.id, pctX, pctY);
-          }
-
-          function onMouseUp() {
-            window.removeEventListener("mousemove", onMouseMove);
-            window.removeEventListener("mouseup", onMouseUp);
-            triggerLayoutRecalculation();
-          }
-
-          window.addEventListener("mousemove", onMouseMove);
-          window.addEventListener("mouseup", onMouseUp);
-        });
-
-        // Touch event listener for tablet/mobile drag support
-        handle.addEventListener("touchstart", function(e) {
-          selectFieldItem(field.id);
-          const rect = workspace.getBoundingClientRect();
-
-          function onTouchMove(touchEvent) {
-            const touch = touchEvent.touches[0];
-            let pxX = touch.clientX - rect.left;
-            let pxY = touch.clientY - rect.top;
-
-            let pctX = Math.round((pxX / rect.width) * 100 * 10) / 10;
-            let pctY = Math.round((pxY / rect.height) * 100 * 10) / 10;
-
-            pctX = Math.max(0, Math.min(100, pctX));
-            pctY = Math.max(0, Math.min(100, pctY));
-
-            field.x = pctX;
-            field.y = pctY;
-
-            updateFieldDataCoordinates(field.id, pctX, pctY);
-          }
-
-          function onTouchEnd() {
-            window.removeEventListener("touchmove", onTouchMove);
-            window.removeEventListener("touchend", onTouchEnd);
-            triggerLayoutRecalculation();
-          }
-
-          window.addEventListener("touchmove", onTouchMove);
-          window.addEventListener("touchend", onTouchEnd);
-        });
-
-        handlesRoot.appendChild(handle);
-      });
-    }
-
-    // Fast selective refresh for position updates while dragging
-    function updateFieldDataCoordinates(id, x, y) {
-      const field = cardFields.find(f => f.id === id);
-      if (field) {
-        field.x = x;
-        field.y = y;
-        // Partial refresh the panel input fields immediately
-        renderFieldsList();
-      }
-    }
-
-    // Field selection highlight triggers
-    function selectFieldItem(id) {
-      activeSelectedFieldId = id;
-      refreshUIComponents();
-    }
-
-    // Rename fields
-    function updateFieldName(id, val) {
-      const field = cardFields.find(f => f.id === id);
-      if (field) {
-        field.fieldName = val.trim();
-        refreshUIComponents();
-        triggerLayoutRecalculation();
-      }
-    }
-
-    // Directly alter coordinates from input boxes
-    function updateFieldCoordinate(id, axis, val) {
-      const field = cardFields.find(f => f.id === id);
-      if (field) {
-        field[axis] = parseFloat(val) || 0;
-        refreshUIComponents();
-        triggerLayoutRecalculation();
-      }
-    }
-
-    // Delete field item
-    function deleteFieldItem(id) {
-      cardFields = cardFields.filter(f => f.id !== id);
-      if (activeSelectedFieldId === id) activeSelectedFieldId = null;
-      logToConsole("已刪除一個文字欄位定位配置。", "warning");
-      refreshUIComponents();
-      triggerLayoutRecalculation();
-    }
-
-    // Create custom manual field item
-    function addNewField() {
-      const nextId = `field-${Date.now()}`;
-      cardFields.push({
-        id: nextId,
-        fieldName: "新欄位",
-        x: 50,
-        y: 80,
-        isCustom: false,
-        customText: "",
-        previewText: "預覽文字",
-        style: {
-          color: "#000000",
-          fontSize: 16,
-          fontWeight: "normal",
-          textAlign: "center",
-          fontFamily: "Noto Sans TC"
-        }
-      });
-      activeSelectedFieldId = nextId;
-      logToConsole("手動新增一個自訂視覺文字定位欄位。", "info");
-      refreshUIComponents();
-      triggerLayoutRecalculation();
-    }
-
-    // Fine-tune side module generator
-    function renderFineTunePanel() {
-      const box = document.getElementById("field-finetune-box");
-      if (!box) return;
-
-      const activeField = cardFields.find(f => f.id === activeSelectedFieldId);
-      if (!activeField) {
-        box.innerHTML = `<p class="text-slate-400 py-4 text-center">請先點選畫面上或欄位列表中的文字元素，啟用精確細節微調。</p>`;
-        return;
-      }
-
-      box.innerHTML = `
-        <div class="space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-slate-800">${activeField.fieldName} 樣式調整</span>
-          </div>
-
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="text-[10px] font-semibold text-slate-400 block mb-0.5">預覽測試文案</label>
-              <input type="text" value="${activeField.previewText}" oninput="updateActiveFieldDetail('previewText', this.value)" class="w-full border border-slate-200 rounded px-2 py-1 text-xs">
-            </div>
-            <div>
-              <label class="text-[10px] font-semibold text-slate-400 block mb-0.5">字體顏色碼</label>
-              <div class="flex space-x-1">
-                <input type="color" value="${activeField.style.color}" oninput="updateActiveFieldStyle('color', this.value)" class="w-6 h-6 p-0 border border-slate-200 rounded cursor-pointer">
-                <input type="text" value="${activeField.style.color}" onchange="updateActiveFieldStyle('color', this.value)" class="w-full border border-slate-200 rounded px-1.5 py-0.5 text-[11px] font-mono">
-              </div>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="text-[10px] font-semibold text-slate-400 block mb-0.5">字體大小 (px)</label>
-              <input type="number" value="${activeField.style.fontSize}" onchange="updateActiveFieldStyle('fontSize', parseInt(this.value))" class="w-full border border-slate-200 rounded px-2 py-1 text-xs">
-            </div>
-            <div>
-              <label class="text-[10px] font-semibold text-slate-400 block mb-0.5">字體粗細</label>
-              <select onchange="updateActiveFieldStyle('fontWeight', this.value)" class="w-full border border-slate-200 rounded px-2 py-1 text-xs bg-white">
-                <option value="normal" ${activeField.style.fontWeight === 'normal' ? 'selected' : ''}>標準 (Normal)</option>
-                <option value="bold" ${activeField.style.fontWeight === 'bold' ? 'selected' : ''}>粗體 (Bold)</option>
-                <option value="300" ${activeField.style.fontWeight === '300' ? 'selected' : ''}>細 (300)</option>
-                <option value="500" ${activeField.style.fontWeight === '500' ? 'selected' : ''}>中等 (500)</option>
-                <option value="700" ${activeField.style.fontWeight === '700' ? 'selected' : ''}>厚重 (700)</option>
-                <option value="900" ${activeField.style.fontWeight === '900' ? 'selected' : ''}>極黑 (900)</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="text-[10px] font-semibold text-slate-400 block mb-0.5">對齊方式</label>
-              <select onchange="updateActiveFieldStyle('textAlign', this.value)" class="w-full border border-slate-200 rounded px-2 py-1 text-xs bg-white">
-                <option value="left" ${activeField.style.textAlign === 'left' ? 'selected' : ''}>左對齊</option>
-                <option value="center" ${activeField.style.textAlign === 'center' ? 'selected' : ''}>置中對齊</option>
-                <option value="right" ${activeField.style.textAlign === 'right' ? 'selected' : ''}>右對齊</option>
-              </select>
-            </div>
-            <div>
-              <label class="text-[10px] font-semibold text-slate-400 block mb-0.5">字型樣式</label>
-              <select onchange="updateActiveFieldStyle('fontFamily', this.value)" class="w-full border border-slate-200 rounded px-2 py-1 text-xs bg-white">
-                <option value="Noto Sans TC" ${activeField.style.fontFamily === 'Noto Sans TC' ? 'selected' : ''}>Noto Sans TC</option>
-                <option value="Microsoft JhengHei" ${activeField.style.fontFamily === 'Microsoft JhengHei' ? 'selected' : ''}>微軟正黑體</option>
-                <option value="sans-serif" ${activeField.style.fontFamily === 'sans-serif' ? 'selected' : ''}>無襯線 (sans-serif)</option>
-                <option value="serif" ${activeField.style.fontFamily === 'serif' ? 'selected' : ''}>有襯線 (serif)</option>
-                <option value="monospace" ${activeField.style.fontFamily === 'monospace' ? 'selected' : ''}>等寬 (monospace)</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="border-t border-slate-100 pt-2.5">
-            <label class="text-[10px] font-semibold text-slate-500 flex items-center space-x-1.5 cursor-pointer">
-              <input type="checkbox" id="field-is-custom" ${activeField.isCustom ? 'checked' : ''} onchange="toggleActiveFieldCustom(this.checked)" class="rounded text-indigo-600 w-3.5 h-3.5">
-              <span>設定為靜態固定不變文案</span>
-            </label>
-            <div id="field-custom-text-wrapper" class="${activeField.isCustom ? '' : 'hidden'} mt-1.5">
-              <input type="text" placeholder="輸入不隨資料庫變動的純文字內容" value="${activeField.customText}" oninput="updateActiveFieldDetail('customText', this.value)" class="w-full border border-slate-200 rounded px-2 py-1 text-xs">
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    // Active detail values setters
-    function updateActiveFieldDetail(prop, value) {
-      const activeField = cardFields.find(f => f.id === activeSelectedFieldId);
-      if (activeField) {
-        activeField[prop] = value;
-        // Update direct visually inside drag area
-        renderWorkspaceCanvas();
-        triggerLayoutRecalculation();
-      }
-    }
-
-    // Update style properties
-    function updateActiveFieldStyle(styleProp, value) {
-      const activeField = cardFields.find(f => f.id === activeSelectedFieldId);
-      if (activeField) {
-        activeField.style[styleProp] = value;
-        renderWorkspaceCanvas();
-        triggerLayoutRecalculation();
-      }
-    }
-
-    // Trigger customized changes toggle
-    function toggleActiveFieldCustom(isChecked) {
-      const activeField = cardFields.find(f => f.id === activeSelectedFieldId);
-      if (activeField) {
-        activeField.isCustom = isChecked;
-        const wrapper = document.getElementById("field-custom-text-wrapper");
-        if (isChecked) {
-          wrapper.classList.remove("hidden");
+      // 更新拖曳定位器的選取狀態
+      const labels = document.querySelectorAll('.draggable-label');
+      labels.forEach(lbl => {
+        if (lbl.dataset.id === id) {
+          lbl.classList.add('border-blue-500', 'ring-2', 'ring-blue-500/30', 'bg-blue-100/30');
+          document.getElementById('coord-x').textContent = `${parseFloat(lbl.style.left).toFixed(1)}%`;
+          document.getElementById('coord-y').textContent = `${parseFloat(lbl.style.top).toFixed(1)}%`;
         } else {
-          wrapper.classList.add("hidden");
+          lbl.classList.remove('border-blue-500', 'ring-2', 'ring-blue-500/30', 'bg-blue-100/30');
         }
-        renderWorkspaceCanvas();
-        triggerLayoutRecalculation();
+      });
+    }
+
+    function addField() {
+      const newId = `field-${Date.now()}`;
+      fields.push({
+        id: newId,
+        key: '新欄位',
+        x: 50,
+        y: 50,
+        size: 16,
+        color: '#000000',
+        weight: 'normal',
+        align: 'center',
+        isCustom: false,
+        customText: '',
+        previewText: '範例內容'
+      });
+      selectedFieldId = newId;
+      renderFieldsList();
+      renderDesignCanvas();
+    }
+
+    function deleteField(id, event) {
+      if (event) event.stopPropagation();
+      fields = fields.filter(f => f.id !== id);
+      if (selectedFieldId === id) selectedFieldId = null;
+      renderFieldsList();
+      renderDesignCanvas();
+      renderA4Preview();
+    }
+
+    function updateFieldKey(id, val) {
+      const field = fields.find(f => f.id === id);
+      if (field) {
+        field.key = val;
+        renderDesignCanvas();
+        renderA4Preview();
       }
     }
 
-    // Main Engine: A4 automated pagination grid layout calculator
-    function triggerLayoutRecalculation() {
-      const a4Container = document.getElementById("a4-pages-printable-wrapper");
-      if (!a4Container) return;
+    function updateFieldType(id, val) {
+      const field = fields.find(f => f.id === id);
+      if (field) {
+        field.isCustom = (val === 'custom');
+        renderFieldsList();
+        renderDesignCanvas();
+        renderA4Preview();
+      }
+    }
 
-      a4Container.innerHTML = "";
+    function updateFieldText(id, val) {
+      const field = fields.find(f => f.id === id);
+      if (field) {
+        if (field.isCustom) {
+          field.customText = val;
+        } else {
+          field.previewText = val;
+        }
+        renderDesignCanvas();
+        renderA4Preview();
+      }
+    }
 
-      // Gather configurations from slider panels
-      const cols = parseInt(document.getElementById("layout-cols").value) || 1;
-      const rows = parseInt(document.getElementById("layout-rows").value) || 1;
-      const cardWidthMm = parseFloat(document.getElementById("card-width").value) || 90;
-      const cardHeightMm = parseFloat(document.getElementById("card-height").value) || 54;
+    // 更新樣式 (大小、顏色、對齊等)
+    function updateFieldStyle(id, prop, val) {
+      const field = fields.find(f => f.id === id);
+      if (field) {
+        if (prop === 'size') field.size = parseInt(val) || 12;
+        if (prop === 'color') field.color = val;
+        if (prop === 'align') field.align = val;
+        renderDesignCanvas();
+        renderA4Preview();
+      }
+    }
 
-      const mTop = parseFloat(document.getElementById("margin-top").value) || 0;
-      const mBottom = parseFloat(document.getElementById("margin-bottom").value) || 0;
-      const mLeft = parseFloat(document.getElementById("margin-left").value) || 0;
-      const mRight = parseFloat(document.getElementById("margin-right").value) || 0;
+    // --- 經典 0.3.2 拖曳畫布邏輯 (拖曳核心) ---
+    function renderDesignCanvas() {
+      const overlay = document.getElementById('design-labels-overlay');
+      overlay.innerHTML = '';
 
-      const scaleCompX = (parseFloat(document.getElementById("scale-compensate-x").value) || 100) / 100;
-      const scaleCompY = (parseFloat(document.getElementById("scale-compensate-y").value) || 100) / 100;
-
-      // Calculate count parameters
-      const totalPeople = peopleRecords.length > 0 ? peopleRecords.length : 1;
-      const cardsPerPage = cols * rows;
-      const totalPages = Math.ceil(totalPeople / cardsPerPage);
-
-      document.getElementById("total-pages-counter").textContent = `共計 ${totalPages} 頁 | ${peopleRecords.length > 0 ? peopleRecords.length : 0} 筆套入卡片`;
-
-      // Draw A4 canvas nodes
-      for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
-        const pageDiv = document.createElement("div");
+      fields.forEach(field => {
+        const label = document.createElement('div');
+        label.dataset.id = field.id;
+        label.className = `absolute draggable-label border border-dashed border-slate-300 rounded cursor-move px-2 py-1 select-none transition-shadow ${field.id === selectedFieldId ? 'border-blue-500 ring-2 ring-blue-500/30 bg-blue-100/30' : ''}`;
         
-        // Print orientations
-        pageDiv.className = `a4-page relative select-none ${pageOrientation === 'portrait' ? 'a4-portrait' : 'a4-landscape'}`;
-        pageDiv.style.paddingTop = `${mTop}mm`;
-        pageDiv.style.paddingBottom = `${mBottom}mm`;
-        pageDiv.style.paddingLeft = `${mLeft}mm`;
-        pageDiv.style.paddingRight = `${mRight}mm`;
+        // 設定絕對定位 (百分比)
+        label.style.left = `${field.x}%`;
+        label.style.top = `${field.y}%`;
+        label.style.transform = 'translate(-50%, -50%)';
+        
+        // 設定內建字型樣式
+        label.style.color = field.color;
+        label.style.fontSize = `${field.size * 0.7}px`; // 視情況縮放
+        label.style.fontWeight = field.weight === 'bold' ? '900' : 'normal';
+        label.style.fontFamily = 'inherit';
 
-        // Inner CSS Grid Layout wrapping A4 area boundary
-        const gridDiv = document.createElement("div");
-        gridDiv.style.display = "grid";
-        gridDiv.style.gridTemplateColumns = `repeat(${cols}, ${cardWidthMm * scaleCompX}mm)`;
-        gridDiv.style.gridTemplateRows = `repeat(${rows}, ${cardHeightMm * scaleCompY}mm)`;
-        gridDiv.style.width = "100%";
-        gridDiv.style.height = "100%";
-        gridDiv.style.justifyContent = "center";
-        gridDiv.style.alignContent = "center";
-        gridDiv.style.boxSizing = "border-box";
+        // 決定預覽呈現文字
+        label.textContent = field.isCustom ? (field.customText || '[固定自訂]') : (field.previewText || `[${field.key}]`);
 
-        // Draw individual cell containers
-        for (let cellIdx = 0; cellIdx < cardsPerPage; cellIdx++) {
-          const recordIdx = pageIdx * cardsPerPage + cellIdx;
-          const person = peopleRecords[recordIdx];
+        // 綁定拖曳滑鼠事件
+        label.addEventListener('mousedown', startDrag);
+        // 觸控支援
+        label.addEventListener('touchstart', startDrag, { passive: false });
 
-          const cellContainer = document.createElement("div");
-          cellContainer.style.width = `${cardWidthMm * scaleCompX}mm`;
-          cellContainer.style.height = `${cardHeightMm * scaleCompY}mm`;
-          cellContainer.style.position = "relative";
-          cellContainer.style.boxSizing = "border-box";
-          cellContainer.style.overflow = "hidden";
+        overlay.appendChild(label);
+      });
+    }
 
-          // If crop line guidelines are enabled
-          if (showCropLines) {
-            cellContainer.className = "border border-dashed border-slate-300/60 print:border-slate-300/40";
-          } else {
-            cellContainer.className = "border border-transparent";
-          }
+    function startDrag(e) {
+      e.preventDefault();
+      const label = e.currentTarget;
+      const fieldId = label.dataset.id;
+      selectField(fieldId);
 
-          // Populate with design data if matching person records found
-          if (peopleRecords.length === 0 || person) {
-            const cardContentOverlay = document.createElement("div");
-            cardContentOverlay.className = "absolute inset-0";
-            
-            // Set Background Image directly on generated layout A4 printable cells
-            if (cleanImageBase64) {
-              cardContentOverlay.style.backgroundImage = `url(${cleanImageBase64})`;
-              cardContentOverlay.style.backgroundSize = "cover";
-              cardContentOverlay.style.backgroundPosition = "center";
-            } else {
-              cardContentOverlay.style.backgroundColor = "#ffffff";
-            }
+      const isTouch = e.type.startsWith('touch');
+      const startX = isTouch ? e.touches[0].clientX : e.clientX;
+      const startY = isTouch ? e.touches[0].clientY : e.clientY;
 
-            // Loop and place text nodes matching coordinate configurations
-            cardFields.forEach(field => {
-              const textNode = document.createElement("span");
-              textNode.style.position = "absolute";
-              textNode.style.left = `${field.x}%`;
-              textNode.style.top = `${field.y}%`;
-              textNode.style.color = field.style.color;
-              textNode.style.fontSize = `${field.style.fontSize}px`;
-              textNode.style.fontWeight = field.style.fontWeight;
-              textNode.style.textAlign = field.style.textAlign;
-              textNode.style.fontFamily = field.style.fontFamily;
-              
-              // Direct align relative offsets offsets
-              textNode.style.transform = `translate(${field.style.textAlign === "center" ? "-50%" : field.style.textAlign === "right" ? "-100%" : "0%"}, -50%)`;
-              textNode.style.whiteSpace = "nowrap";
+      const container = document.getElementById('design-canvas-container');
+      const rect = container.getBoundingClientRect();
 
-              // Map properties logic
-              if (field.isCustom) {
-                textNode.textContent = field.customText;
+      // 計算當前點擊相對於卡片內部的偏移量
+      const labelRect = label.getBoundingClientRect();
+      const offsetX = startX - (labelRect.left + labelRect.width / 2);
+      const offsetY = startY - (labelRect.top + labelRect.height / 2);
+
+      function doDrag(moveEvent) {
+        const currentX = isTouch ? moveEvent.touches[0].clientX : moveEvent.clientX;
+        const currentY = isTouch ? moveEvent.touches[0].clientY : moveEvent.clientY;
+
+        // 計算相對於容器的百分比位置
+        let pctX = ((currentX - rect.left - offsetX) / rect.width) * 100;
+        let pctY = ((currentY - rect.top - offsetY) / rect.height) * 100;
+
+        // 限制在畫布之內
+        pctX = Math.max(0, Math.min(100, pctX));
+        pctY = Math.max(0, Math.min(100, pctY));
+
+        // 更新狀態庫
+        const field = fields.find(f => f.id === fieldId);
+        if (field) {
+          field.x = Math.round(pctX * 10) / 10;
+          field.y = Math.round(pctY * 10) / 10;
+          
+          // 更新 DOM 樣式與微調座標顯示
+          label.style.left = `${field.x}%`;
+          label.style.top = `${field.y}%`;
+          document.getElementById('coord-x').textContent = `${field.x.toFixed(1)}%`;
+          document.getElementById('coord-y').textContent = `${field.y.toFixed(1)}%`;
+        }
+      }
+
+      function stopDrag() {
+        window.removeEventListener(isTouch ? 'touchmove' : 'mousemove', doDrag);
+        window.removeEventListener(isTouch ? 'touchend' : 'mouseup', stopDrag);
+        // 拖曳結束更新 A4 紙張
+        renderA4Preview();
+      }
+
+      window.addEventListener(isTouch ? 'touchmove' : 'mousemove', doDrag, { passive: false });
+      window.addEventListener(isTouch ? 'touchend' : 'mouseup', stopDrag);
+    }
+
+    // --- 版面配置與 A4 動態生成排版核心 ---
+    function updateLayout() {
+      renderA4Preview();
+    }
+
+    function renderA4Preview() {
+      const container = document.getElementById('a4-pages-container');
+      container.innerHTML = '';
+
+      const orientation = document.getElementById('layout-orientation').value;
+      const showCropLines = document.getElementById('layout-crop').value === 'true';
+      const cols = parseInt(document.getElementById('layout-cols').value) || 2;
+      const rows = parseInt(document.getElementById('layout-rows').value) || 4;
+      const marginMm = parseFloat(document.getElementById('layout-margin').value) || 10;
+      const gapMm = parseFloat(document.getElementById('layout-gap').value) || 2;
+
+      const itemsPerPage = cols * rows;
+      const pageCount = Math.max(1, Math.ceil(people.length / itemsPerPage));
+      document.getElementById('page-count-badge').textContent = pageCount;
+
+      // 生成每張 A4 頁面
+      for (let p = 0; p < pageCount; p++) {
+        const pageDiv = document.createElement('div');
+        pageDiv.className = `a4-page relative flex flex-col ${orientation === 'portrait' ? 'a4-portrait' : 'a4-landscape'}`;
+        pageDiv.style.padding = `${marginMm}mm`;
+
+        // 卡片網格容器
+        const gridDiv = document.createElement('div');
+        gridDiv.className = 'grid w-full h-full';
+        gridDiv.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+        gridDiv.style.gridTemplateRows = `repeat(${rows}, minmax(0, 1fr))`;
+        gridDiv.style.gap = `${gapMm}mm`;
+
+        // 置入卡片
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const index = p * itemsPerPage + (r * cols + c);
+            const person = people[index];
+
+            const cardCell = document.createElement('div');
+            cardCell.className = `relative w-full h-full rounded-sm overflow-hidden flex items-center justify-center bg-slate-50 border border-slate-100 ${showCropLines ? 'border-dashed border-slate-300 print:border-slate-300' : 'border-transparent'}`;
+
+            if (person) {
+              // 建立內嵌卡片結構
+              if (bgImageData) {
+                const bgImg = document.createElement('img');
+                bgImg.src = bgImageData;
+                bgImg.className = 'absolute inset-0 w-full h-full object-cover';
+                cardCell.appendChild(bgImg);
               } else {
-                if (person) {
-                  // Resolve matching table keys cleanly
-                  const keyMatch = Object.keys(person).find(k => k.trim().toLowerCase() === field.fieldName.trim().toLowerCase());
-                  textNode.textContent = keyMatch ? person[keyMatch] : field.previewText || `[${field.fieldName}]`;
-                } else {
-                  textNode.textContent = field.previewText || `[${field.fieldName}]`;
-                }
+                cardCell.innerHTML = `<div class="absolute inset-0 flex items-center justify-center border border-dashed border-slate-300 text-slate-300 text-[10px]">尚未載入底圖</div>`;
               }
-              
-              cardContentOverlay.appendChild(textNode);
-            });
 
-            cellContainer.appendChild(cardContentOverlay);
+              // 建立文字覆蓋圖層
+              const overlayDiv = document.createElement('div');
+              overlayDiv.className = 'absolute inset-0';
 
-          } else {
-            cellContainer.className = "card-preview-container flex items-center justify-center bg-slate-50 text-slate-300 text-[10px] select-none pointer-events-none";
-            if (showCropLines) {
-              cellContainer.className += " border border-dashed border-slate-200 print:border-slate-300/40";
+              // 渲染各個欄位
+              fields.forEach(field => {
+                const txt = document.createElement('div');
+                txt.className = 'absolute';
+                txt.style.left = `${field.x}%`;
+                txt.style.top = `${field.y}%`;
+                txt.style.transform = 'translate(-50%, -50%)';
+                
+                txt.style.color = field.color;
+                txt.style.fontSize = `${field.size}px`;
+                txt.style.fontWeight = field.weight === 'bold' ? '900' : 'normal';
+                txt.style.textAlign = field.align;
+                txt.style.fontFamily = 'inherit';
+                txt.style.whiteSpace = 'nowrap';
+
+                // 計算動態對應值
+                if (field.isCustom) {
+                  txt.textContent = field.customText;
+                } else {
+                  txt.textContent = person[field.key] !== undefined ? person[field.key] : (person[field.previewText] || '');
+                }
+
+                overlayDiv.appendChild(txt);
+              });
+
+              cardCell.appendChild(overlayDiv);
+            } else {
+              // 空白填充格 (補齊 A4 排版網格對齊)
+              cardCell.innerHTML = `<div class="text-[10px] text-slate-300 select-none">（空白格）</div>`;
             }
-            cellContainer.innerHTML = `<span>(無對應人員數據)</span>`;
-          }
 
-          gridDiv.appendChild(cellContainer);
+            gridDiv.appendChild(cardCell);
+          }
         }
 
         pageDiv.appendChild(gridDiv);
-        a4Container.appendChild(pageDiv);
+        container.appendChild(pageDiv);
       }
     }
   </script>
