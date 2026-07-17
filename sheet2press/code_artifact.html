@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自動化識別證與桌牌批量排版系統 v0.4.1</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        /* 拖曳時的輔助樣式 */
+        .dragging {
+            opacity: 0.6;
+            border: 2px dashed #3b82f6 !important;
+        }
+
+        /* 列印專用樣式 */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #printArea, #printArea * {
+                visibility: visible;
+            }
+            #printArea {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                background: white;
+            }
+            .no-print {
+                display: none !important;
+            }
+            /* 強制背景顏色與圖像顯示 */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+
+        /* 裁切線樣式 */
+        .crop-mark {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            border-color: #cbd5e1;
+            pointer-events: none;
+        }
+        .crop-tl { top: 0; left: 0; border-top: 1px solid; border-left: 1px solid; }
+        .crop-tr { top: 0; right: 0; border-top: 1px solid; border-right: 1px solid; }
+        .crop-bl { bottom: 0; left: 0; border-bottom: 1px solid; border-left: 1px solid; }
+        .crop-br { bottom: 0; right: 0; border-bottom: 1px solid; border-right: 1px solid; }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col">
+
+    <!-- 頂部導航 -->
+    <header class="bg-slate-900 text-white shadow-md no-print">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-blue-600 rounded-lg">
+                    <i data-lucide="contact-2" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-wide">識別證與桌牌自動化批量排版系統</h1>
+                    <p class="text-xs text-slate-400">專為 A4 批量定位列印設計的落地師工具 (v0.4.1)</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="px-2.5 py-1 text-xs bg-slate-800 text-slate-300 rounded-full border border-slate-700 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-ping"></span>
+                    本機純前端安全運行
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要內容區 -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 grid grid-cols-1 lg:grid-cols-12 gap-6 no-print">
+        
+        <!-- 左側：設定控制面板 (5 cols) -->
+        <section class="lg:col-span-5 flex flex-col gap-6">
+            
+            <!-- STEP 1 & 1.5: 底圖上傳與版面設定 -->
+            <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-bold flex items-center justify-center">1</span>
+                    <h2 class="text-base font-bold text-slate-900">載入底圖與選擇版面</h2>
+                </div>
+                
+                <!-- 預設版面選擇器 (由 JavaScript 動態生成或控制) -->
+                <div class="mb-4">
+                    <label class="block text-xs font-medium text-slate-500 mb-2">版面樣式與 A4 拼版規格</label>
+                    <div id="presetContainer" class="grid grid-cols-3 gap-2">
+                        <!-- 這裡將由 renderPresetSelector 動態注入 -->
+                    </div>
+                </div>
+
+                <!-- 檔案上傳 -->
+                <div id="dropzone" class="border-2 border-dashed border-slate-200 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 transition-colors">
+                    <input type="file" id="templateUpload" accept="image/*" class="hidden">
+                    <div class="flex flex-col items-center justify-center gap-2">
+                        <i data-lucide="image" class="w-8 h-8 text-slate-400"></i>
+                        <p class="text-xs font-medium text-slate-600">拖曳或點擊上傳卡片底圖</p>
+                        <p class="text-[10px] text-slate-400">支援 PNG, JPG (建議比例依版面而定)</p>
+                    </div>
+                </div>
+
+                <!-- 預設底圖快選 -->
+                <div class="mt-3 flex gap-2 items-center">
+                    <span class="text-xs text-slate-400">沒有底圖？試用：</span>
+                    <button onclick="loadSampleTemplate('blue')" class="px-2.5 py-1 text-[11px] bg-blue-50 hover:bg-blue-100 text-blue-600 rounded border border-blue-200 transition-all">商務藍色底圖</button>
+                    <button onclick="loadSampleTemplate('gold')" class="px-2.5 py-1 text-[11px] bg-amber-50 hover:bg-amber-100 text-amber-600 rounded border border-amber-200 transition-all">尊爵金色底圖</button>
+                </div>
+            </div>
+
+            <!-- STEP 2: 動態欄位配置與排版定位 -->
+            <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-bold flex items-center justify-center">2</span>
+                        <h2 class="text-base font-bold text-slate-900">配置卡片動態欄位</h2>
+                    </div>
+                    <button onclick="addNewTextField()" class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg flex items-center gap-1 transition-all shadow-sm">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> 新增欄位
+                    </button>
+                </div>
+
+                <!-- 目前配置的欄位清單 -->
+                <div class="space-y-3 max-h-[280px] overflow-y-auto pr-1" id="fieldConfigList">
+                    <!-- 欄位設定卡片將會動態生成至此 -->
+                    <div class="text-center py-6 text-xs text-slate-400" id="noFieldsPlaceholder">
+                        目前尚未建立任何動態欄位，請點擊上方按鈕建立。
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3: 名單導入 CSV -->
+            <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-bold flex items-center justify-center">3</span>
+                        <h2 class="text-base font-bold text-slate-900">匯入名冊 (CSV)</h2>
+                    </div>
+                    <button onclick="loadSampleData()" class="text-xs text-blue-600 hover:underline">載入範例資料</button>
+                </div>
+
+                <div class="flex gap-2 mb-3">
+                    <input type="file" id="csvUpload" accept=".csv" class="hidden">
+                    <button onclick="document.getElementById('csvUpload').click()" class="flex-1 py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg flex items-center justify-center gap-1.5 transition-all border border-slate-200">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4 text-green-600"></i> 上傳 CSV 檔案
+                    </button>
+                    <button onclick="clearData()" class="py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-medium rounded-lg flex items-center justify-center gap-1.5 transition-all border border-rose-100">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i> 清除
+                    </button>
+                </div>
+
+                <div id="dataSummary" class="text-xs text-slate-500 hidden bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                    <div class="flex justify-between mb-1">
+                        <span>名單筆數：<strong id="dataCount" class="text-slate-900">0</strong> 筆</span>
+                        <span>欄位頭：<strong id="dataHeaders" class="text-slate-900">無</strong></span>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- 右側：排版畫布與效果即時預覽 (7 cols) -->
+        <section class="lg:col-span-7 flex flex-col gap-6">
+            
+            <!-- 畫布卡片 -->
+            <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200 flex flex-col gap-4">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="monitor" class="w-5 h-5 text-slate-600"></i>
+                        <h2 class="text-base font-bold text-slate-900">排版與定位畫布 (單張預覽與設計)</h2>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                        <span class="text-xs text-slate-500" id="canvasRatioText">A6 直式 (2:3)</span>
+                    </div>
+                </div>
+
+                <p class="text-xs text-slate-400">可在畫布中自由拖曳調整文字位置。點擊文字方塊可開啟編輯屬性面板。</p>
+
+                <!-- 畫布核心容器 -->
+                <div class="flex justify-center items-center bg-slate-100 rounded-lg p-4 overflow-hidden border border-slate-200 relative min-h-[420px]">
+                    
+                    <!-- 卡片實體畫布 -->
+                    <div id="cardCanvas" class="relative bg-white shadow-xl overflow-hidden rounded-md transition-all duration-300" style="width: 280px; height: 396px;">
+                        
+                        <!-- 背景底圖 -->
+                        <div id="canvasBackground" class="absolute inset-0 bg-cover bg-center flex items-center justify-center text-slate-300 font-light select-none text-sm">
+                            請在左側上傳底圖或使用試用樣式
+                        </div>
+
+                        <!-- 浮動文字區塊容器 -->
+                        <div id="canvasFieldsContainer" class="absolute inset-0 pointer-events-auto">
+                            <!-- 文字區塊將被動態追加到這裡 -->
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- 畫單張卡片預覽控制 -->
+                <div class="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-100">
+                    <div class="flex items-center gap-2">
+                        <button onclick="prevRecord()" class="p-1 bg-white hover:bg-slate-100 text-slate-600 rounded border border-slate-200 disabled:opacity-40" id="btnPrevRec" disabled>
+                            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                        </button>
+                        <span class="text-xs font-medium text-slate-600">
+                            預覽第 <span id="currentRecIndex">1</span> / <span id="totalRecCount">1</span> 筆
+                        </span>
+                        <button onclick="nextRecord()" class="p-1 bg-white hover:bg-slate-100 text-slate-600 rounded border border-slate-200 disabled:opacity-40" id="btnNextRec" disabled>
+                            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="applyAutoContrast()" class="px-2.5 py-1 text-[11px] bg-slate-200 hover:bg-slate-300 text-slate-700 font-medium rounded transition-all">
+                            自動高對比配色
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 批量 A4 預覽與列印執行 -->
+            <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-200 flex flex-col gap-4">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="printer" class="w-5 h-5 text-slate-600"></i>
+                        <h2 class="text-base font-bold text-slate-900">STEP 4: A4 批量預覽與極致列印</h2>
+                    </div>
+                    <button onclick="startBatchPrint()" class="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold text-sm rounded-lg flex items-center gap-2 transition-all shadow-md">
+                        <i data-lucide="printer" class="w-4 h-4"></i> 立即執行 A4 批量列印 / 匯出 PDF
+                    </button>
+                </div>
+                <p class="text-xs text-slate-400">系統會自動根據您選擇的預設版面，將所有名單自動分配並排列到 A4 的列印版面上，同時提供裁切裁縫輔助線。</p>
+                
+                <div class="bg-slate-50 border border-slate-100 rounded-lg p-3 text-xs text-slate-500 space-y-1">
+                    <span class="font-semibold text-slate-700">💡 列印最佳化指南：</span>
+                    <p>1. 點擊「立即執行 A4 批量列印」後，將會彈出系統列印視窗。</p>
+                    <p>2. 請在列印目的地選擇<strong>「另存為 PDF」</strong>或選擇實體印表機。</p>
+                    <p>3. <strong>極重要設定：</strong>請在列印設定中將<strong>「邊界」設定為「無」</strong>(None)，並確保勾選<strong>「背景圖形」</strong>以顯示底圖！</p>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- 頁尾 -->
+    <footer class="bg-slate-800 text-slate-400 py-6 px-4 border-t border-slate-700 no-print text-center text-xs mt-auto">
+        <p>© 2026 批量識別證與桌牌自動化排版系統 | 您的資料 100% 留在本機處理，安全無虞</p>
+    </footer>
+
+
+    <!-- ========================================== -->
+    <!--  隱藏的列印預覽區域，列印時才會透過 CSS 顯示   -->
+    <!-- ========================================== -->
+    <div id="printArea" class="hidden">
+        <!-- 列印頁面內容將由 JavaScript 動態拼版生成 -->
+    </div>
+
+
+    <!-- ========================================== -->
+    <!--            JavaScript 核心邏輯              -->
+    <!-- ========================================== -->
+    <script>
+        // --- 1. 全域變數定義 ---
+        const PRESETS = {
+            '2x2_A6': {
+                id: '2x2_A6',
+                name: '2x2 A6 識別證',
+                orientation: 'portrait', // A4 Portrait 210x297
+                gridCols: 2,
+                gridRows: 2,
+                cardWidthMm: 95,         // A6 size with bleed margin fit inside 210mm wide A4
+                cardHeightMm: 135,
+                aspectRatio: 95/135,
+                canvasWidth: 280,        // 畫布顯示尺寸 (px)
+                canvasHeight: 398,       // 280 / (95/135)
+                desc: '適合 2x2 批量排版，A4 直式列印'
+            },
+            '2x1_A5': {
+                id: '2x1_A5',
+                name: '2x1 A5 橫式桌牌',
+                orientation: 'landscape', // A4 Landscape 297x210
+                gridCols: 2,
+                gridRows: 1,
+                cardWidthMm: 135,
+                cardHeightMm: 190,
+                aspectRatio: 135/190,
+                canvasWidth: 280,
+                canvasHeight: 394,
+                desc: '適合 2x1 桌牌，A4 橫式列印'
+            },
+            '1x1_A4': {
+                id: '1x1_A4',
+                name: '1x1 A4 直式桌牌',
+                orientation: 'portrait',  // A4 Portrait
+                gridCols: 1,
+                gridRows: 1,
+                cardWidthMm: 190,
+                cardHeightMm: 270,
+                aspectRatio: 190/270,
+                canvasWidth: 280,
+                canvasHeight: 398,
+                desc: '單張巨幅桌牌，A4 直式列印'
+            }
+        };
+
+        let currentPresetId = '2x2_A6'; // 預設值
+        let currentTemplateUrl = null;  // 底圖 URL Base64 or Blob
+        let textFields = [];            // 儲存所有動態欄位的陣列
+        let csvData = [];               // CSV 載入的二維名單資料 [{姓名: '張三', ...}]
+        let currentRecordIdx = 0;       // 目前正在預覽的名單索引值
+        let activeSelectedFieldId = null; // 當前被點選編輯的文字區塊 ID
+
+        // 預設欄位結構
+        const DEFAULT_FIELDS = [
+            { id: 'field_name', label: '姓名', mappedHeader: '姓名', xPercent: 50, yPercent: 45, fontSize: 24, fontColor: '#1e293b', isBold: true, isItalic: false, align: 'center', placeholder: '王小明' },
+            { id: 'field_dept', label: '部門', mappedHeader: '部門', xPercent: 50, yPercent: 65, fontSize: 14, fontColor: '#64748b', isBold: false, isItalic: false, align: 'center', placeholder: '技術研發部' },
+            { id: 'field_id', label: '編號', mappedHeader: '編號', xPercent: 50, yPercent: 80, fontSize: 12, fontColor: '#94a3b8', isBold: false, isItalic: false, align: 'center', placeholder: 'ID: 9527' }
+        ];
+
+        // --- 2. 系統初始化 ---
+        window.onload = function() {
+            initSystem();
+        };
+
+        function initSystem() {
+            // A. 初始化 Lucide 圖標
+            lucide.createIcons();
+
+            // B. 渲染版面預設選擇器 (解決 renderPresetSelector is not defined 的問題)
+            renderPresetSelector();
+
+            // C. 註冊拖曳底圖上傳監聽
+            const dropzone = document.getElementById('dropzone');
+            const fileInput = document.getElementById('templateUpload');
+
+            dropzone.addEventListener('click', () => fileInput.click());
+            dropzone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropzone.classList.add('border-blue-500', 'bg-blue-50');
+            });
+            dropzone.addEventListener('dragleave', () => {
+                dropzone.classList.remove('border-blue-500', 'bg-blue-50');
+            });
+            dropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('border-blue-500', 'bg-blue-50');
+                if (e.dataTransfer.files.length > 0) {
+                    handleTemplateFile(e.dataTransfer.files[0]);
+                }
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleTemplateFile(e.target.files[0]);
+                }
+            });
+
+            // D. 註冊 CSV 上傳監聽
+            document.getElementById('csvUpload').addEventListener('change', handleCsvUpload);
+
+            // E. 初始化預設文字欄位
+            textFields = JSON.parse(JSON.stringify(DEFAULT_FIELDS));
+            
+            // F. 載入藍色預設底圖並渲染整個系統
+            loadSampleTemplate('blue');
+        }
+
+        // --- 3. 渲染版面選擇器 (核心修正) ---
+        function renderPresetSelector() {
+            const container = document.getElementById('presetContainer');
+            if (!container) return;
+
+            container.innerHTML = ''; // 清空
+
+            Object.values(PRESETS).forEach(preset => {
+                const isActive = preset.id === currentPresetId;
+                
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `flex flex-col items-center justify-center p-3 rounded-lg border text-center transition-all ${
+                    isActive 
+                    ? 'border-blue-600 bg-blue-50 text-blue-700 ring-2 ring-blue-100' 
+                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
+                }`;
+                btn.onclick = () => selectPreset(preset.id);
+
+                // 生成小圖示模擬版面
+                let iconClass = 'w-5 h-7 border border-slate-400 bg-white rounded-sm mb-1.5';
+                if (preset.orientation === 'landscape') {
+                    iconClass = 'w-7 h-5 border border-slate-400 bg-white rounded-sm mb-1.5';
+                }
+
+                btn.innerHTML = `
+                    <div class="${iconClass} ${isActive ? 'border-blue-500 bg-blue-100' : ''}"></div>
+                    <span class="text-xs font-bold block">${preset.name}</span>
+                    <span class="text-[9px] text-slate-400 mt-0.5">${preset.gridCols}x${preset.gridRows} 排版</span>
+                `;
+
+                container.appendChild(btn);
+            });
+        }
+
+        // 切換預設版面
+        function selectPreset(presetId) {
+            currentPresetId = presetId;
+            renderPresetSelector(); // 重構選擇器 UI
+            
+            const preset = PRESETS[currentPresetId];
+            
+            // 變更畫布縱橫比
+            const canvasEl = document.getElementById('cardCanvas');
+            if (canvasEl) {
+                canvasEl.style.width = `${preset.canvasWidth}px`;
+                canvasEl.style.height = `${preset.canvasHeight}px`;
+            }
+
+            // 更新提示字樣
+            const ratioTextEl = document.getElementById('canvasRatioText');
+            if (ratioTextEl) {
+                ratioTextEl.innerText = `${preset.name} (${preset.orientation === 'portrait' ? '直式' : '橫式'})`;
+            }
+
+            // 重新繪製畫布文字欄位與預覽
+            renderCanvasFields();
+        }
+
+        // --- 4. 處理範例與使用者底圖載入 ---
+        function loadSampleTemplate(theme) {
+            // 使用純 SVG 生成的高品質預設名片底圖作為快選
+            let canvas = document.createElement('canvas');
+            canvas.width = 400;
+            canvas.height = 570;
+            let ctx = canvas.getContext('2d');
+
+            if (theme === 'blue') {
+                // 漸層深藍色高端風格
+                let grad = ctx.createLinearGradient(0, 0, 400, 570);
+                grad.addColorStop(0, '#0f172a');
+                grad.addColorStop(0.5, '#1e293b');
+                grad.addColorStop(1, '#3b82f6');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, 400, 570);
+
+                // 畫一些裝飾線條
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(400, 0, 200, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.strokeStyle = 'rgba(59, 130, 246, 0.2)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(0, 570, 150, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // 標誌圖形
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+                ctx.beginPath();
+                ctx.arc(200, 120, 25, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('華府旅遊 STAFF', 200, 180);
+            } else {
+                // 漸層尊爵白金配金色風格
+                let grad = ctx.createLinearGradient(0, 0, 400, 570);
+                grad.addColorStop(0, '#fafaf9');
+                grad.addColorStop(0.7, '#f5f5f4');
+                grad.addColorStop(1, '#e7e5e4');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, 400, 570);
+
+                // 金色幾何曲線
+                ctx.strokeStyle = '#d97706';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(0, 120);
+                ctx.bezierCurveTo(120, 90, 280, 200, 400, 150);
+                ctx.stroke();
+
+                // 下方飾條
+                ctx.fillStyle = '#d97706';
+                ctx.fillRect(0, 550, 400, 20);
+
+                ctx.fillStyle = '#78716c';
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('VIP GUEST CARD', 200, 80);
+            }
+
+            currentTemplateUrl = canvas.toDataURL();
+            updateCanvasBackground();
+        }
+
+        function handleTemplateFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('請上傳有效的圖片檔案！');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentTemplateUrl = e.target.result;
+                updateCanvasBackground();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function updateCanvasBackground() {
+            const bgEl = document.getElementById('canvasBackground');
+            if (bgEl && currentTemplateUrl) {
+                bgEl.innerHTML = ''; // 移除文字提示
+                bgEl.style.backgroundImage = `url(${currentTemplateUrl})`;
+            }
+        }
+
+        // --- 5. 動態文字欄位控制邏輯 ---
+        function renderCanvasFields() {
+            const container = document.getElementById('canvasFieldsContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const preset = PRESETS[currentPresetId];
+
+            textFields.forEach(field => {
+                // 建立畫布上的絕對定位文字元素
+                const textEl = document.createElement('div');
+                textEl.id = `canvas_${field.id}`;
+                textEl.className = `absolute select-none cursor-move border border-transparent hover:border-blue-400 hover:bg-blue-50/10 px-2 py-0.5 rounded transition-all flex items-center justify-center ${
+                    activeSelectedFieldId === field.id ? 'border-blue-600 bg-blue-100/20' : ''
+                }`;
+                
+                // 設定定位
+                textEl.style.left = `${field.xPercent}%`;
+                textEl.style.top = `${field.yPercent}%`;
+                textEl.style.transform = `translate(-50%, -50%)`;
+
+                // 設定字型與外觀
+                textEl.style.fontSize = `${field.fontSize}px`;
+                textEl.style.color = field.fontColor;
+                textEl.style.fontWeight = field.isBold ? 'bold' : 'normal';
+                textEl.style.fontStyle = field.isItalic ? 'italic' : 'normal';
+                textEl.style.textAlign = field.align;
+
+                // 取得要呈現的資料字串 (看有沒有匯入 CSV 名冊)
+                let displayValue = getFieldValueForCurrentRecord(field);
+                textEl.innerText = displayValue;
+
+                // 註冊點擊進入編輯模式
+                textEl.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    selectField(field.id);
+                });
+
+                // 註冊滑鼠拖曳定位
+                makeElementDraggable(textEl, field);
+
+                container.appendChild(textEl);
+            });
+
+            // 更新左側面板欄位控制
+            renderConfigPanel();
+        }
+
+        // 輔助獲取當前紀錄欄位文字
+        function getFieldValueForCurrentRecord(field) {
+            if (csvData && csvData.length > 0 && csvData[currentRecordIdx]) {
+                const row = csvData[currentRecordIdx];
+                if (row[field.mappedHeader] !== undefined) {
+                    return row[field.mappedHeader];
+                }
+            }
+            return field.placeholder || field.label;
+        }
+
+        // 拖曳定位核心算法
+        function makeElementDraggable(el, fieldData) {
+            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+            
+            el.onmousedown = dragMouseDown;
+
+            function dragMouseDown(e) {
+                e.preventDefault();
+                // 選擇此欄位
+                selectField(fieldData.id);
+
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+                document.onmouseup = closeDragElement;
+                document.onmousemove = elementDrag;
+                el.classList.add('dragging');
+            }
+
+            function elementDrag(e) {
+                e.preventDefault();
+                pos1 = pos3 - e.clientX;
+                pos2 = pos4 - e.clientY;
+                pos3 = e.clientX;
+                pos4 = e.clientY;
+
+                // 畫布容器大小
+                const canvasEl = document.getElementById('cardCanvas');
+                const canvasRect = canvasEl.getBoundingClientRect();
+
+                // 計算相對於畫布的新百分比坐標
+                let newLeftPx = el.offsetLeft - pos1;
+                let newTopPx = el.offsetTop - pos2;
+
+                let newLeftPercent = (newLeftPx / canvasRect.width) * 100;
+                let newTopPercent = (newTopPx / canvasRect.height) * 100;
+
+                // 邊際安全限制 (0% ~ 100%)
+                if (newLeftPercent < 5) newLeftPercent = 5;
+                if (newLeftPercent > 95) newLeftPercent = 95;
+                if (newTopPercent < 5) newTopPercent = 5;
+                if (newTopPercent > 95) newTopPercent = 95;
+
+                fieldData.xPercent = Math.round(newLeftPercent);
+                fieldData.yPercent = Math.round(newTopPercent);
+
+                el.style.left = `${fieldData.xPercent}%`;
+                el.style.top = `${fieldData.yPercent}%`;
+                
+                // 更新該欄位的設定卡片
+                const inputX = document.getElementById(`input_x_${fieldData.id}`);
+                const inputY = document.getElementById(`input_y_${fieldData.id}`);
+                if (inputX) inputX.value = fieldData.xPercent;
+                if (inputY) inputY.value = fieldData.yPercent;
+            }
+
+            function closeDragElement() {
+                document.onmouseup = null;
+                document.onmousemove = null;
+                el.classList.remove('dragging');
+                renderCanvasFields();
+            }
+        }
+
+        // 點選欄位進入活動編輯
+        function selectField(fieldId) {
+            activeSelectedFieldId = fieldId;
+            // 重刷畫布與設定面板（套用 active 樣式外框）
+            const fields = document.querySelectorAll('[id^="canvas_"]');
+            fields.forEach(f => {
+                f.classList.remove('border-blue-600', 'bg-blue-100/20');
+            });
+            const activeEl = document.getElementById(`canvas_${fieldId}`);
+            if (activeEl) {
+                activeEl.classList.add('border-blue-600', 'bg-blue-100/20');
+            }
+
+            // 滾動左側對應設定卡片到視線
+            const configCard = document.getElementById(`config_card_${fieldId}`);
+            if (configCard) {
+                configCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                // 短暫高亮
+                configCard.classList.add('ring-2', 'ring-blue-500/20');
+                setTimeout(() => configCard.classList.remove('ring-2', 'ring-blue-500/20'), 1500);
+            }
+        }
+
+        // 新增動態文字欄位
+        function addNewTextField() {
+            const newId = `field_${Date.now()}`;
+            const randomLabel = `新增欄位_${textFields.length + 1}`;
+            
+            // 嘗試從當前 CSV headers 中拿沒用過的，否則用預設
+            let mappedHeader = '姓名';
+            if (csvData && csvData.length > 0) {
+                const headers = Object.keys(csvData[0]);
+                const usedHeaders = textFields.map(f => f.mappedHeader);
+                const unused = headers.find(h => !usedHeaders.includes(h));
+                if (unused) mappedHeader = unused;
+                else mappedHeader = headers[0];
+            }
+
+            const newField = {
+                id: newId,
+                label: randomLabel,
+                mappedHeader: mappedHeader,
+                xPercent: 50,
+                yPercent: Math.min(20 + textFields.length * 15, 90), // 等距降下
+                fontSize: 16,
+                fontColor: '#000000',
+                isBold: false,
+                isItalic: false,
+                align: 'center',
+                placeholder: '預覽文字'
+            };
+
+            textFields.push(newField);
+            activeSelectedFieldId = newId;
+            renderCanvasFields();
+        }
+
+        // 刪除文字欄位
+        function deleteField(fieldId) {
+            textFields = textFields.filter(f => f.id !== fieldId);
+            if (activeSelectedFieldId === fieldId) {
+                activeSelectedFieldId = textFields.length > 0 ? textFields[0].id : null;
+            }
+            renderCanvasFields();
+        }
+
+        // 渲染左側控制面板的各欄位控制卡片
+        function renderConfigPanel() {
+            const listContainer = document.getElementById('fieldConfigList');
+            const placeholder = document.getElementById('noFieldsPlaceholder');
+            
+            if (!listContainer) return;
+            
+            // 清空除 placeholder 外的動態內容
+            const dynamicCards = listContainer.querySelectorAll('.dynamic-config-card');
+            dynamicCards.forEach(c => c.remove());
+
+            if (textFields.length === 0) {
+                placeholder.classList.remove('hidden');
+                return;
+            } else {
+                placeholder.classList.add('hidden');
+            }
+
+            // 取得 CSV 欄位清單供對應 select 使用
+            let headerOptionsHtml = `<option value="">-- 無 (自訂常數) --</option>`;
+            if (csvData && csvData.length > 0) {
+                const headers = Object.keys(csvData[0]);
+                headers.forEach(h => {
+                    headerOptionsHtml += `<option value="${h}">${h}</option>`;
+                });
+            } else {
+                // 如果沒有導入 CSV，則使用預設
+                ['姓名', '部門', '編號'].forEach(h => {
+                    headerOptionsHtml += `<option value="${h}">${h}</option>`;
+                });
+            }
+
+            textFields.forEach((field) => {
+                const card = document.createElement('div');
+                card.id = `config_card_${field.id}`;
+                card.className = `dynamic-config-card bg-slate-50 rounded-lg p-3.5 border transition-all ${
+                    activeSelectedFieldId === field.id ? 'border-blue-500 bg-blue-50/10 ring-1 ring-blue-500/20' : 'border-slate-100'
+                }`;
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between gap-2 mb-2.5">
+                        <div class="flex items-center gap-1.5 min-w-0">
+                            <span class="w-1.5 h-3 bg-blue-600 rounded-full"></span>
+                            <input type="text" value="${field.label}" onchange="updateFieldProp('${field.id}', 'label', this.value)" class="bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:bg-white px-1 py-0.5 text-xs font-bold text-slate-800 focus:outline-none truncate w-[110px]" title="修改欄位顯示標籤">
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <button onclick="pickColorFromTemplate('${field.id}')" class="p-1 text-slate-500 hover:text-blue-600 hover:bg-white rounded transition-all" title="顏色吸色器">
+                                <i data-lucide="pipette" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="deleteField('${field.id}')" class="p-1 text-slate-400 hover:text-rose-600 hover:bg-white rounded transition-all" title="刪除此欄位">
+                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-12 gap-2 text-xs">
+                        <!-- 資料繫結 (CSV 欄位對應) -->
+                        <div class="col-span-12 flex flex-col gap-1">
+                            <span class="text-[10px] text-slate-400 font-medium">資料庫欄位對齊</span>
+                            <select onchange="updateFieldProp('${field.id}', 'mappedHeader', this.value)" class="w-full bg-white border border-slate-200 rounded px-1.5 py-1 text-xs focus:outline-none focus:border-blue-500">
+                                ${headerOptionsHtml}
+                            </select>
+                        </div>
+
+                        <!-- 樣式控制 -->
+                        <div class="col-span-4 flex flex-col gap-1">
+                            <span class="text-[10px] text-slate-400 font-medium">字型大小</span>
+                            <input type="number" value="${field.fontSize}" onchange="updateFieldProp('${field.id}', 'fontSize', parseInt(this.value) || 12)" class="w-full bg-white border border-slate-200 rounded px-1.5 py-0.5 text-xs text-center">
+                        </div>
+                        <div class="col-span-5 flex flex-col gap-1">
+                            <span class="text-[10px] text-slate-400 font-medium">字型顏色</span>
+                            <div class="flex gap-1">
+                                <input type="color" value="${field.fontColor}" oninput="updateFieldProp('${field.id}', 'fontColor', this.value)" class="w-8 h-6 bg-transparent border-0 cursor-pointer">
+                                <input type="text" value="${field.fontColor}" onchange="updateFieldProp('${field.id}', 'fontColor', this.value)" class="w-full bg-white border border-slate-200 rounded px-1 text-[10px] text-center">
+                            </div>
+                        </div>
+                        <div class="col-span-3 flex flex-col gap-1">
+                            <span class="text-[10px] text-slate-400 font-medium">文字樣式</span>
+                            <div class="flex gap-0.5 border border-slate-200 rounded overflow-hidden h-[24px]">
+                                <button onclick="toggleFieldStyle('${field.id}', 'isBold')" class="flex-1 hover:bg-slate-200 flex items-center justify-center font-bold ${field.isBold ? 'bg-blue-600 text-white hover:bg-blue-600' : 'bg-white text-slate-700'}" title="粗體">B</button>
+                                <button onclick="toggleFieldStyle('${field.id}', 'isItalic')" class="flex-1 hover:bg-slate-200 flex items-center justify-center italic ${field.isItalic ? 'bg-blue-600 text-white hover:bg-blue-600' : 'bg-white text-slate-700'}" title="斜體">I</button>
+                            </div>
+                        </div>
+
+                        <!-- 坐標微調 -->
+                        <div class="col-span-6 flex flex-col gap-1">
+                            <span class="text-[10px] text-slate-400 font-medium">水準 X (%)</span>
+                            <input type="number" id="input_x_${field.id}" value="${field.xPercent}" min="0" max="100" onchange="updateFieldProp('${field.id}', 'xPercent', parseInt(this.value) || 50)" class="w-full bg-white border border-slate-200 rounded px-1.5 py-0.5 text-xs text-center">
+                        </div>
+                        <div class="col-span-6 flex flex-col gap-1">
+                            <span class="text-[10px] text-slate-400 font-medium">垂直 Y (%)</span>
+                            <input type="number" id="input_y_${field.id}" value="${field.yPercent}" min="0" max="100" onchange="updateFieldProp('${field.id}', 'yPercent', parseInt(this.value) || 50)" class="w-full bg-white border border-slate-200 rounded px-1.5 py-0.5 text-xs text-center">
+                        </div>
+                    </div>
+                `;
+
+                // 選中對應的繫結 dropdown
+                const selectEl = card.querySelector('select');
+                if (selectEl) {
+                    selectEl.value = field.mappedHeader;
+                }
+
+                listContainer.appendChild(card);
+            });
+
+            // 再次渲染 Lucide 圖標
+            lucide.createIcons();
+        }
+
+        // 修改特定屬性值
+        function updateFieldProp(fieldId, prop, value) {
+            const field = textFields.find(f => f.id === fieldId);
+            if (field) {
+                field[prop] = value;
+                renderCanvasFields();
+            }
+        }
+
+        // 開關粗體斜體樣式
+        function toggleFieldStyle(fieldId, styleName) {
+            const field = textFields.find(f => f.id === fieldId);
+            if (field) {
+                field[styleName] = !field[styleName];
+                renderCanvasFields();
+            }
+        }
+
+        // 自動高對比配色 (黑/白) 避免底圖太深文字看不清
+        function applyAutoContrast() {
+            // 這裡可以做一個極簡配色套用：如果底圖是暗色系(如預設商務藍)，將所有文字欄位切換為淺色高亮。
+            // 否則，套用深色。
+            const isDarkBackground = currentTemplateUrl && currentTemplateUrl.includes('0f172a'); // 簡略判斷商務藍色底圖
+            
+            textFields.forEach(field => {
+                if (isDarkBackground) {
+                    field.fontColor = '#ffffff';
+                } else {
+                    field.fontColor = '#1e293b';
+                }
+            });
+            renderCanvasFields();
+        }
+
+        // 前景色吸色功能 (吸取底圖特定位置顏色，純前端模擬高精準度吸色)
+        function pickColorFromTemplate(fieldId) {
+            if (!currentTemplateUrl) {
+                alert('請先上傳或選擇卡片底圖！');
+                return;
+            }
+            // 利用 Canvas 讀取中心位置或隨機位置顏色來吸色
+            let img = new Image();
+            img.src = currentTemplateUrl;
+            img.onload = function() {
+                let tempCanvas = document.createElement('canvas');
+                tempCanvas.width = img.width;
+                tempCanvas.height = img.height;
+                let ctx = tempCanvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                
+                // 根據欄位所在的百分比計算取色坐標
+                const field = textFields.find(f => f.id === fieldId);
+                if (field) {
+                    const pickX = Math.round((field.xPercent / 100) * img.width);
+                    const pickY = Math.round((field.yPercent / 100) * img.height);
+                    
+                    try {
+                        let pixel = ctx.getImageData(pickX, pickY, 1, 1).data;
+                        // 取反色或其對比色作為前景色，或者直接採集底色並回饋提示
+                        const hex = "#" + ("000000" + rgbToHex(pixel[0], pixel[1], pixel[2])).slice(-6);
+                        
+                        // 計算此顏色亮度決定前景色
+                        const brightness = (pixel[0] * 299 + pixel[1] * 587 + pixel[2] * 114) / 1000;
+                        const recommendedColor = brightness > 125 ? '#1e293b' : '#ffffff';
+                        
+                        field.fontColor = recommendedColor;
+                        alert(`已偵測底層吸色(RGB: ${pixel[0]},${pixel[1]},${pixel[2]})，為保持最佳對比閱讀性，已推薦並自動套用前景色：${recommendedColor}`);
+                        renderCanvasFields();
+                    } catch(e) {
+                        // 跨域安全性限制 fallback
+                        field.fontColor = '#1e293b';
+                        renderCanvasFields();
+                    }
+                }
+            };
+        }
+
+        function rgbToHex(r, g, b) {
+            if (r > 255 || g > 255 || b > 255) throw "無效顏色";
+            return ((r << 16) | (g << 8) | b).toString(16);
+        }
+
+        // --- 6. CSV 檔案導入與名單對齊處理 ---
+        function handleCsvUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const text = evt.target.result;
+                parseCsv(text);
+            };
+            // 台灣繁體中文環境通常為 Big5、UTF-8 或 UTF-16
+            reader.readAsText(file, "UTF-8");
+        }
+
+        function parseCsv(text) {
+            csvData = [];
+            
+            // 支援基本逗號與雙引號包夾的極簡高效 CSV 解析器
+            const lines = text.split(/\r?\n/);
+            if (lines.length < 2) {
+                alert('上傳的 CSV 檔案無有效資料紀錄！');
+                return;
+            }
+
+            // 解析 Header
+            const headers = splitCsvLine(lines[0]);
+            
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                const cols = splitCsvLine(lines[i]);
+                const rowObj = {};
+                
+                headers.forEach((h, idx) => {
+                    rowObj[h] = cols[idx] !== undefined ? cols[idx].trim() : '';
+                });
+                csvData.push(rowObj);
+            }
+
+            // 更新名單狀態與綁定欄位
+            currentRecordIdx = 0;
+            updateDataSummary();
+            
+            // 嘗試自動交叉比對 CSV 標題與現有欄位 mappedHeader，高精準匹配
+            if (csvData.length > 0) {
+                const headers = Object.keys(csvData[0]);
+                textFields.forEach(f => {
+                    // 如果 CSV 的 Header 中有與原先欄位 Label 或 MappedHeader 完全一致的，自動繫結
+                    const exactMatch = headers.find(h => h.trim() === f.label.trim() || h.trim() === f.mappedHeader.trim());
+                    if (exactMatch) {
+                        f.mappedHeader = exactMatch;
+                    } else {
+                        // fallback 繫結第一個
+                        f.mappedHeader = headers[0];
+                    }
+                });
+            }
+
+            renderCanvasFields();
+        }
+
+        function splitCsvLine(line) {
+            // 極簡 CSV 正規表示式分割
+            let matches = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+            if (matches.length === 0) {
+                return line.split(',');
+            }
+            return matches.map(m => m.replace(/^"|"$/g, ''));
+        }
+
+        function loadSampleData() {
+            // 快速載入 5 筆台灣人名樣例名單
+            csvData = [
+                { '姓名': '陳志明', '部門': '行銷企劃部', '編號': 'ID: 80112' },
+                { '姓名': '林美婷', '部門': '客戶服務處', '編號': 'ID: 80115' },
+                { '姓名': '張家豪', '部門': '跨國商務組', '編號': 'ID: 80210' },
+                { '姓名': '黃雅筑', '部門': '資訊研發部', '編號': 'ID: 80222' },
+                { '姓名': '李柏翰', '部門': '媒體公關部', '編號': 'ID: 80301' }
+            ];
+            currentRecordIdx = 0;
+            updateDataSummary();
+            
+            // 自動繫結對應
+            textFields.forEach(f => {
+                if (['姓名', '部門', '編號'].includes(f.label)) {
+                    f.mappedHeader = f.label;
+                }
+            });
+
+            renderCanvasFields();
+        }
+
+        function updateDataSummary() {
+            const summaryDiv = document.getElementById('dataSummary');
+            const dataCountSpan = document.getElementById('dataCount');
+            const dataHeadersSpan = document.getElementById('dataHeaders');
+
+            if (!summaryDiv) return;
+
+            if (csvData.length > 0) {
+                summaryDiv.classList.remove('hidden');
+                dataCountSpan.innerText = csvData.length;
+                
+                const headers = Object.keys(csvData[0]);
+                dataHeadersSpan.innerText = headers.slice(0, 3).join(', ') + (headers.length > 3 ? '...' : '');
+
+                // 啟用前後預覽按鈕
+                document.getElementById('btnPrevRec').disabled = false;
+                document.getElementById('btnNextRec').disabled = false;
+                document.getElementById('totalRecCount').innerText = csvData.length;
+                document.getElementById('currentRecIndex').innerText = currentRecordIdx + 1;
+            } else {
+                summaryDiv.classList.add('hidden');
+                document.getElementById('btnPrevRec').disabled = true;
+                document.getElementById('btnNextRec').disabled = true;
+                document.getElementById('totalRecCount').innerText = '1';
+                document.getElementById('currentRecIndex').innerText = '1';
+            }
+        }
+
+        function clearData() {
+            csvData = [];
+            currentRecordIdx = 0;
+            updateDataSummary();
+            renderCanvasFields();
+        }
+
+        // 單張預覽前後導航
+        function prevRecord() {
+            if (currentRecordIdx > 0) {
+                currentRecordIdx--;
+                document.getElementById('currentRecIndex').innerText = currentRecordIdx + 1;
+                renderCanvasFields();
+            }
+        }
+
+        function nextRecord() {
+            if (currentRecordIdx < csvData.length - 1) {
+                currentRecordIdx++;
+                document.getElementById('currentRecIndex').innerText = currentRecordIdx + 1;
+                renderCanvasFields();
+            }
+        }
+
+        // --- 7. A4 拼版與批量列印模組 (核心強大特色) ---
+        function startBatchPrint() {
+            const printArea = document.getElementById('printArea');
+            if (!printArea) return;
+
+            // 如果名單是空的，預設抓取當前畫布上的預覽產生 1 張
+            const listToPrint = csvData.length > 0 ? csvData : [{}];
+            const preset = PRESETS[currentPresetId];
+
+            printArea.innerHTML = ''; // 清空先前列印快取
+            printArea.className = "block bg-white"; // 移除 hidden
+
+            // A4 規格大小 (Portrait: 210x297mm, Landscape: 297x210mm)
+            const isLandscape = preset.orientation === 'landscape';
+            const pageW = isLandscape ? '297mm' : '210mm';
+            const pageH = isLandscape ? '210mm' : '297mm';
+
+            // 計算一頁能容納幾張卡 (gridCols * gridRows)
+            const cardsPerPage = preset.gridCols * preset.gridRows;
+            const totalPages = Math.ceil(listToPrint.length / cardsPerPage);
+
+            for (let pageNum = 0; pageNum < totalPages; pageNum++) {
+                // 建立 A4 獨立頁面實體
+                const pageEl = document.createElement('div');
+                pageEl.className = "relative bg-white mx-auto overflow-hidden relative break-after-page page-container";
+                pageEl.style.width = pageW;
+                pageEl.style.height = pageH;
+                pageEl.style.boxSizing = "border-box";
+                
+                // A4 內邊距，提供給卡片、裁切線安全的對齊區 (上下左右留白 10mm 完美避開列印死區)
+                pageEl.style.padding = "10mm";
+
+                // 內建 Grid 佈局，精準拼版
+                const gridEl = document.createElement('div');
+                gridEl.className = "w-full h-full grid";
+                gridEl.style.gridTemplateColumns = `repeat(${preset.gridCols}, 1fr)`;
+                gridEl.style.gridTemplateRows = `repeat(${preset.gridRows}, 1fr)`;
+                gridEl.style.gap = "8mm"; // 卡片間隔
+
+                // 將對應的名單資料渲染至當前頁面
+                const startIdx = pageNum * cardsPerPage;
+                const endIdx = Math.min(startIdx + cardsPerPage, listToPrint.length);
+
+                for (let i = startIdx; i < endIdx; i++) {
+                    const rowData = listToPrint[i];
+                    
+                    // 建立單張列印卡片外層 (含裁切線容器)
+                    const cardWrapper = document.createElement('div');
+                    cardWrapper.className = "relative flex justify-center items-center w-full h-full";
+
+                    // 建立卡片主體 (精準比對畫布尺寸比例)
+                    const cardEl = document.createElement('div');
+                    cardEl.className = "relative overflow-hidden shadow-sm border border-slate-100";
+                    cardEl.style.width = `${preset.cardWidthMm}mm`;
+                    cardEl.style.height = `${preset.cardHeightMm}mm`;
+                    cardEl.style.backgroundColor = "#ffffff";
+                    
+                    if (currentTemplateUrl) {
+                        cardEl.style.backgroundImage = `url(${currentTemplateUrl})`;
+                        cardEl.style.backgroundSize = "cover";
+                        cardEl.style.backgroundPosition = "center";
+                    }
+
+                    // 依據畫布文字百分比坐標定位，完美還原 A4 排版
+                    textFields.forEach(field => {
+                        const txt = document.createElement('div');
+                        txt.className = "absolute flex items-center justify-center";
+                        txt.style.left = `${field.xPercent}%`;
+                        txt.style.top = `${field.yPercent}%`;
+                        txt.style.transform = "translate(-50%, -50%)";
+                        
+                        // 計算列印字型大小 (使用卡片寬度的等比放大)
+                        // A4 A6 縮放比例大約 1mm = 2.83 pt (DPI 72)
+                        // 這裡提供一個極為高精準度的毫米列印字型適配
+                        const mmFontSize = (field.fontSize / 280) * preset.cardWidthMm;
+                        txt.style.fontSize = `${mmFontSize}mm`;
+                        txt.style.color = field.fontColor;
+                        txt.style.fontWeight = field.isBold ? 'bold' : 'normal';
+                        txt.style.fontStyle = field.isItalic ? 'italic' : 'normal';
+                        txt.style.textAlign = field.align;
+                        txt.style.whiteSpace = "nowrap";
+
+                        // 填充資料庫內容
+                        let textVal = field.placeholder || field.label;
+                        if (rowData[field.mappedHeader] !== undefined) {
+                            textVal = rowData[field.mappedHeader];
+                        }
+                        txt.innerText = textVal;
+
+                        cardEl.appendChild(txt);
+                    });
+
+                    // 加上四角裁切定位線，好讓美工刀、裁卡機輕鬆對齊
+                    const tl = document.createElement('div'); tl.className = "crop-mark crop-tl"; cardEl.appendChild(tl);
+                    const tr = document.createElement('div'); tr.className = "crop-mark crop-tr"; cardEl.appendChild(tr);
+                    const bl = document.createElement('div'); bl.className = "crop-mark crop-bl"; cardEl.appendChild(bl);
+                    const br = document.createElement('div'); br.className = "crop-mark crop-br"; cardEl.appendChild(br);
+
+                    cardWrapper.appendChild(cardEl);
+                    gridEl.appendChild(cardWrapper);
+                }
+
+                // 填滿 A4 Page 並追加至列印緩衝區
+                pageEl.appendChild(gridEl);
+                printArea.appendChild(pageEl);
+            }
+
+            // 觸發系統自帶列印，並由印表機驅動直接下載 PDF
+            window.print();
+
+            // 列印完成後，還原主畫面，隱藏列印版面
+            setTimeout(() => {
+                printArea.className = "hidden";
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
