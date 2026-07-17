@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 自動化識別證排版系統 v0.3.2 - 專業增強版</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- PapaParse for CSV -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap');
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+      background-color: #f1f5f9;
+    }
+    /* A4 預覽樣式 */
+    .a4-page {
+      background: white;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05), 0 2px 5px rgba(0, 0, 0, 0.05);
+      position: relative;
+      overflow: hidden;
+      margin: 0 auto;
+      box-sizing: border-box;
+    }
+    .a4-portrait {
+      width: 210mm;
+      height: 297mm;
+    }
+    .a4-landscape {
+      width: 297mm;
+      height: 210mm;
+    }
+    /* 列印專用 CSS */
+    @media print {
+      body {
+        background: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .a4-page {
+        box-shadow: none !important;
+        margin: 0 !important;
+        page-break-after: always;
+        border: none !important;
+      }
+      @page {
+        margin: 0;
+      }
+    }
+    /* 捲軸美化 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-800">
+
+  <!-- 頂部導航列 -->
+  <header class="no-print bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+    <div class="flex items-center gap-3">
+      <div class="bg-blue-600 text-white p-2 rounded-lg shadow-md shadow-blue-200">
+        <i data-lucide="contact-2" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+          AI 自動化識別證排版系統
+          <span class="text-xs bg-blue-100 text-blue-700 font-bold px-2.5 py-0.5 rounded-full">v0.3.2 企業增強版</span>
+        </h1>
+        <p class="text-xs text-slate-500">雲端 CSV 同步 • 完稿透明疊合對照 • 無縫極致拼接排版</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-medium text-sm flex items-center gap-2 transition-all shadow-md shadow-blue-100 active:scale-95">
+        <i data-lucide="printer" class="w-4 h-4"></i>
+        立即列印 (A4)
+      </button>
+    </div>
+  </header>
+
+  <!-- 通知氣泡 (替換傳統 Alert 提升質感) -->
+  <div id="toast-notification" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs py-3 px-4 rounded-xl shadow-2xl flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50 pointer-events-none">
+    <span id="toast-icon" class="text-emerald-400"><i data-lucide="info" class="w-4 h-4"></i></span>
+    <span id="toast-text">設定已更新！</span>
+  </div>
+
+  <!-- 主要內容區 -->
+  <main class="flex-1 flex overflow-hidden h-[calc(100vh-73px)]">
+    
+    <!-- 左側控制面板 (寬度調整) -->
+    <section class="no-print w-[430px] shrink-0 border-r border-slate-200 bg-white overflow-y-auto flex flex-col">
+      
+      <!-- 步驟 1: 置入底圖與名單 -->
+      <div class="p-5 border-b border-slate-200 space-y-4">
+        <div class="flex items-center gap-2 text-blue-600">
+          <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">1</span>
+          <h2 class="font-bold text-slate-900">載入識別證底圖與對照完稿</h2>
+        </div>
+        
+        <!-- 雙圖上傳區 -->
+        <div class="grid grid-cols-2 gap-2">
+          <!-- 乾淨底圖 -->
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-500 mb-1">1. 乾淨底圖 (PNG/JPG)</label>
+            <div id="drop-zone-bg" class="border-2 border-dashed border-slate-200 hover:border-blue-400 rounded-xl p-3 transition text-center cursor-pointer bg-slate-50 h-24 flex flex-col items-center justify-center">
+              <input type="file" id="bg-upload" class="hidden" accept="image/*">
+              <div id="bg-prompt" class="flex flex-col items-center gap-1">
+                <i data-lucide="image" class="w-5 h-5 text-slate-400"></i>
+                <span class="text-[10px] text-slate-400">點擊選取底圖</span>
+              </div>
+              <div id="bg-success" class="hidden text-center">
+                <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600 mx-auto"></i>
+                <span class="text-[9px] text-emerald-800 font-medium truncate block max-w-[120px]" id="bg-name-text">已載入</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 完稿對照圖 -->
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-500 mb-1">2. 完稿對照圖 (排版參考)</label>
+            <div id="drop-zone-ref" class="border-2 border-dashed border-slate-200 hover:border-indigo-400 rounded-xl p-3 transition text-center cursor-pointer bg-slate-50 h-24 flex flex-col items-center justify-center">
+              <input type="file" id="ref-upload" class="hidden" accept="image/*">
+              <div id="ref-prompt" class="flex flex-col items-center gap-1">
+                <i data-lucide="picture-in-picture" class="w-5 h-5 text-slate-400"></i>
+                <span class="text-[10px] text-slate-400">點擊選取完稿圖</span>
+              </div>
+              <div id="ref-success" class="hidden text-center">
+                <i data-lucide="sparkles" class="w-5 h-5 text-indigo-600 mx-auto"></i>
+                <span class="text-[9px] text-indigo-800 font-medium truncate block max-w-[120px]" id="ref-name-text">已疊合</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 完稿圖疊合透明度控制 (僅在上傳完稿圖後作用) -->
+        <div id="opacity-control-panel" class="bg-slate-50 p-2.5 rounded-xl border border-slate-100 hidden">
+          <div class="flex items-center justify-between text-[11px] font-medium text-slate-600 mb-1">
+            <span class="flex items-center gap-1"><i data-lucide="sliders" class="w-3.5 h-3.5 text-indigo-500"></i>對照完稿圖透明度</span>
+            <span id="ref-opacity-val" class="font-bold text-indigo-600">50%</span>
+          </div>
+          <input type="range" id="ref-opacity-slider" min="0" max="100" value="50" oninput="updateRefOpacity(this.value)" class="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+        </div>
+
+        <!-- 名單來源：CSV & Google Sheets -->
+        <div class="border-t border-slate-100 pt-4 space-y-2.5">
+          <label class="block text-xs font-semibold text-slate-600">名單與雲端資料連結</label>
+          
+          <!-- Google Sheets 連結區 -->
+          <div class="space-y-1.5 bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold text-blue-800 flex items-center gap-1">
+                <i data-lucide="link" class="w-3.5 h-3.5"></i>Google Sheets CSV 發布網址
+              </span>
+              <button onclick="toggleSheetsGuide()" class="text-[10px] text-blue-600 hover:underline">教學說明</button>
+            </div>
+            
+            <div id="sheets-guide" class="hidden text-[10px] text-slate-500 bg-white p-2.5 rounded-lg border border-slate-200 leading-relaxed mb-2 space-y-1">
+              <p class="font-semibold text-slate-700">📌 雲端試算表設定方式：</p>
+              <p>1. 點擊頂端「檔案」➔「共用」➔「發布到網路」</p>
+              <p>2. 選擇「整份文件」或指定工作表，右側下拉選單改選為<strong class="text-blue-600">「逗號分隔值 (.csv)」</strong></p>
+              <p>3. 點擊發布，複製產生的網址貼在下方，點點同步即可！</p>
+            </div>
+
+            <div class="flex gap-1.5">
+              <input type="text" id="sheets-url" placeholder="貼上發布為 .csv 的連結網址" class="flex-1 text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white">
+              <button onclick="syncGoogleSheets()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition shrink-0">
+                同步雲端
+              </button>
+            </div>
+          </div>
+
+          <!-- CSV 本地上傳 -->
+          <div class="flex gap-2">
+            <input type="file" id="csv-upload" accept=".csv" class="hidden">
+            <button onclick="document.getElementById('csv-upload').click()" class="flex-1 border border-slate-300 hover:bg-slate-50 text-slate-700 px-3 py-2 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 transition">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i>
+              選擇 CSV 檔案
+            </button>
+            <button onclick="loadTemplateData()" class="border border-slate-300 hover:bg-slate-50 text-slate-500 px-3 py-2 rounded-lg text-xs font-medium transition">
+              載入預設範例
+            </button>
+          </div>
+          
+          <div id="csv-status" class="mt-2 text-xs text-slate-500 hidden flex items-center gap-1 bg-slate-50 p-2 rounded-lg">
+            <i data-lucide="users" class="w-4 h-4 text-blue-500"></i>
+            <span id="csv-status-text">已成功載入 0 筆名單資料</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 步驟 2: 文字區塊管理 -->
+      <div class="p-5 border-b border-slate-200 flex-1 flex flex-col overflow-hidden">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2 text-blue-600">
+            <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">2</span>
+            <h2 class="font-bold text-slate-900">文字區塊與個別詳細設計</h2>
+          </div>
+          <button onclick="addField()" class="text-blue-600 hover:text-blue-800 text-xs font-bold flex items-center gap-1 bg-blue-50 px-2.5 py-1 rounded-lg">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>新增區塊
+          </button>
+        </div>
+
+        <!-- 欄位選取快速編輯區 -->
+        <div class="flex-1 overflow-y-auto pr-1 space-y-3">
+          <!-- 欄位列表 -->
+          <div id="fields-container" class="space-y-2">
+            <!-- 欄位卡片動態插入 -->
+          </div>
+
+          <!-- 個別詳細微調面板 (Selected Field Property Inspector) -->
+          <div id="field-inspector-panel" class="border border-blue-200 bg-blue-50/20 rounded-xl p-4 space-y-3 hidden">
+            <div class="flex items-center justify-between border-b border-slate-200/50 pb-2">
+              <span class="text-xs font-bold text-slate-950 flex items-center gap-1">
+                <i data-lucide="sliders" class="w-4 h-4 text-blue-600"></i>個別文字極致設定
+              </span>
+              <span id="inspector-field-name" class="text-[11px] font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full"></span>
+            </div>
+
+            <!-- 位置微調 -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <span class="text-[10px] text-slate-400 block mb-0.5">水平位置 X (%)</span>
+                <input type="number" id="insp-x" step="0.5" class="w-full text-xs p-1.5 border rounded-lg bg-white" onchange="applyInspectorChange()">
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-400 block mb-0.5">垂直位置 Y (%)</span>
+                <input type="number" id="insp-y" step="0.5" class="w-full text-xs p-1.5 border rounded-lg bg-white" onchange="applyInspectorChange()">
+              </div>
+            </div>
+
+            <!-- 字距、行高、字型 -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <span class="text-[10px] text-slate-400 block mb-0.5">字型樣式 (Font)</span>
+                <select id="insp-font" class="w-full text-xs p-1.5 border rounded-lg bg-white" onchange="applyInspectorChange()">
+                  <option value="'Noto Sans TC', sans-serif">預設黑體 (Noto Sans)</option>
+                  <option value="'Microsoft JhengHei', sans-serif">微軟正黑體</option>
+                  <option value="'DFKai-SB', serif">標楷體</option>
+                  <option value="'PMingLiU', serif">新細明體</option>
+                  <option value="monospace">等寬字型 (Monospace)</option>
+                  <option value="'Georgia', serif">襯線古典英數字</option>
+                </select>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-400 block mb-0.5">字體大小 (px)</span>
+                <input type="number" id="insp-size" class="w-full text-xs p-1.5 border rounded-lg bg-white" onchange="applyInspectorChange()">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <span class="text-[10px] text-slate-400 block mb-0.5">字間距 (Letter Spacing)</span>
+                <select id="insp-spacing" class="w-full text-xs p-1.5 border rounded-lg bg-white" onchange="applyInspectorChange()">
+                  <option value="0px">預設字距</option>
+                  <option value="1px">1px</option>
+                  <option value="2px">2px (舒適)</option>
+                  <option value="4px">4px (微寬)</option>
+                  <option value="6px">6px (大氣)</option>
+                  <option value="-1px">-1px (緊密)</option>
+                </select>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-400 block mb-0.5">文字行高 (Line Height)</span>
+                <input type="number" id="insp-height" step="0.1" class="w-full text-xs p-1.5 border rounded-lg bg-white" onchange="applyInspectorChange()">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <span class="text-[10px] text-slate-400 block mb-0.5">文字顏色 (Color)</span>
+                <input type="color" id="insp-color" class="w-full h-8 p-0.5 border rounded-lg cursor-pointer" onchange="applyInspectorChange()">
+              </div>
+              <div class="flex flex-col justify-end">
+                <button onclick="toggleInspectorBold()" id="insp-bold-btn" class="w-full py-1.5 px-3 border rounded-lg text-xs font-bold transition flex items-center justify-center gap-1">
+                  <i data-lucide="bold" class="w-3.5 h-3.5"></i>粗體設定
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- 未選取提示 -->
+          <div id="inspector-placeholder" class="text-center py-6 text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+            <i data-lucide="hand" class="w-6 h-6 mx-auto mb-2 opacity-50 text-slate-500"></i>
+            <p class="text-[11px] font-medium">請點擊卡片上欄位或上方文字區塊<br>以啟用「個別文字字距、行高、字型」等微調設定</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 步驟 3: A4 版面設定 (強化無縫排版) -->
+      <div class="p-5 bg-slate-50 space-y-4">
+        <div class="flex items-center gap-2 text-blue-600">
+          <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">3</span>
+          <h2 class="font-bold text-slate-900">A4 版面規格與無縫拼接</h2>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">紙張方向</label>
+            <select id="layout-orientation" onchange="updateLayout()" class="w-full text-xs border border-slate-300 rounded-lg p-2 bg-white focus:ring-1 focus:ring-blue-500">
+              <option value="portrait">直向 (Portrait)</option>
+              <option value="landscape">橫向 (Landscape)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">裁切輔助線</label>
+            <select id="layout-crop" onchange="updateLayout()" class="w-full text-xs border border-slate-300 rounded-lg p-2 bg-white focus:ring-1 focus:ring-blue-500">
+              <option value="true-dashed">裁切虛線</option>
+              <option value="true-solid">裁切實線 (無縫裁切專用)</option>
+              <option value="false">完全隱藏線條</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 mb-1">自訂卡片寬度 (mm)</label>
+            <input type="number" id="card-width-mm" value="86" min="10" onchange="updateLayout()" class="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold text-slate-600 mb-1">自訂卡片高度 (mm)</label>
+            <input type="number" id="card-height-mm" value="54" min="10" onchange="updateLayout()" class="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-blue-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">橫向欄數 (Cols)</label>
+            <input type="number" id="layout-cols" value="2" min="1" onchange="updateLayout()" class="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">縱向列數 (Rows)</label>
+            <input type="number" id="layout-rows" value="5" min="1" onchange="updateLayout()" class="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-blue-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">邊界留白 (Margin, mm)</label>
+            <input type="number" id="layout-margin" value="10" min="0" onchange="updateLayout()" class="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-blue-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1 flex items-center justify-between">
+              卡片間距 (Gap)
+              <span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1 rounded">0 = 無縫拼接</span>
+            </label>
+            <input type="number" id="layout-gap" value="0" min="0" onchange="updateLayout()" class="w-full text-xs border border-slate-300 rounded-lg p-2 focus:ring-1 focus:ring-blue-500 text-emerald-700 font-bold">
+          </div>
+        </div>
+
+        <div class="text-[10px] text-slate-400 bg-slate-100 p-2 rounded-lg leading-relaxed">
+          💡 <strong class="text-slate-600">無縫拼接提示：</strong>將卡片間距 Gap 設為 0，搭配裁切實線。列印出來後，多張卡片將無縫靠攏，您只需要用美工刀將中間整片一刀切開，即可完成裁切，完全省去每張卡片裁切四邊的時間。
+        </div>
+      </div>
+
+    </section>
+
+    <!-- 右側雙預覽區 (畫布編輯與 A4 排版預覽) -->
+    <section class="flex-1 flex flex-col bg-slate-100 overflow-hidden">
+      
+      <!-- 切換頁籤 -->
+      <div class="no-print bg-white border-b border-slate-200 px-6 py-2.5 flex items-center justify-between">
+        <div class="flex bg-slate-100 p-1 rounded-lg">
+          <button id="tab-canvas" onclick="switchTab('canvas')" class="px-4 py-1.5 text-xs font-semibold rounded-md transition-all shadow-sm bg-white text-blue-600">
+            <span class="flex items-center gap-1.5">
+              <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>視覺拖曳與完稿對照
+            </span>
+          </button>
+          <button id="tab-a4" onclick="switchTab('a4')" class="px-4 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900">
+            <span class="flex items-center gap-1.5">
+              <i data-lucide="grid" class="w-3.5 h-3.5"></i>A4 列印預覽 (共 <span id="page-count-badge" class="font-bold text-blue-600">0</span> 頁)
+            </span>
+          </button>
+        </div>
+        <div class="text-xs text-slate-500">
+          * 列印時請務必選擇 <strong class="text-blue-600">A4 紙張</strong>，並將邊界設為 <strong class="text-blue-600">無</strong>。
+        </div>
+      </div>
+
+      <!-- 視窗容器 -->
+      <div class="flex-1 p-8 overflow-y-auto flex justify-center items-start">
+        
+        <!-- 畫籤 1: 視覺拖曳設計介面 -->
+        <div id="view-canvas" class="w-full max-w-lg bg-white rounded-2xl p-6 shadow-sm flex flex-col items-center gap-4">
+          <div class="text-center">
+            <h3 class="font-bold text-slate-800 text-sm">單張底圖文字定位 (拖曳編輯)</h3>
+            <p class="text-xs text-slate-400 mt-1">
+              可直接在底圖上拖曳文字。若上傳了「完稿對照圖」，可調整半透明度，方便您完美對齊。
+            </p>
+          </div>
+
+          <!-- 視覺化畫布 (動態調整比例) -->
+          <div id="design-canvas-container" class="relative w-[340px] h-[480px] bg-slate-50 rounded-xl border border-slate-200 overflow-hidden shadow-inner flex items-center justify-center">
+            
+            <!-- 乾淨底圖預覽 -->
+            <img id="design-bg-img" src="" class="absolute inset-0 w-full h-full object-cover select-none pointer-events-none hidden">
+            
+            <!-- 完稿對照圖預覽 (疊合在上面) -->
+            <img id="design-ref-img" src="" class="absolute inset-0 w-full h-full object-cover select-none pointer-events-none hidden" style="opacity: 0.5;">
+            
+            <!-- 尚未載入圖片提示 -->
+            <div id="design-bg-placeholder" class="text-slate-400 text-center p-4">
+              <i data-lucide="contact-2" class="w-12 h-12 mx-auto mb-2 opacity-30 text-blue-600"></i>
+              <p class="text-xs font-semibold">尚未載入乾淨底圖</p>
+              <p class="text-[10px] opacity-75 mt-1">請在左側上傳您的識別證底圖圖片</p>
+            </div>
+            
+            <!-- 文字標籤容器 (拖曳核心) -->
+            <div id="design-labels-overlay" class="absolute inset-0 select-none"></div>
+          </div>
+
+          <!-- 即時微調控制 -->
+          <div class="w-full bg-slate-50 p-3 rounded-xl border border-slate-200 grid grid-cols-2 gap-3 text-xs">
+            <div>
+              <span class="text-slate-500 font-medium">水平位置 (X):</span>
+              <span id="coord-x" class="font-bold text-blue-600">無選取</span>
+            </div>
+            <div>
+              <span class="text-slate-500 font-medium">垂直位置 (Y):</span>
+              <span id="coord-y" class="font-bold text-blue-600">無選取</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 畫籤 2: A4 列印預覽 -->
+        <div id="view-a4" class="hidden space-y-8">
+          <!-- A4 紙張動態生成區 -->
+          <div id="a4-pages-container" class="flex flex-col gap-8"></div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <script>
+    // --- 系統資料狀態庫 ---
+    let bgImageData = ''; // 乾淨底圖 Data URL
+    let refImageData = ''; // 完稿對照圖 Data URL
+    let bgFileName = '';
+    let currentTab = 'canvas';
+    let selectedFieldId = null; // 當前被選取進行拖曳/編輯的欄位 ID
+    let refOpacity = 50; // 完稿對照疊合透明度 (%)
+
+    // 內建傳統高解析度欄位
+    let fields = [
+      { id: 'field-1', key: '姓名', x: 50, y: 45, size: 28, color: '#1e293b', weight: 'bold', align: 'center', isCustom: false, customText: '', previewText: '陳小明', fontFamily: "'Noto Sans TC', sans-serif", letterSpacing: '0px', lineHeight: 1.2 },
+      { id: 'field-2', key: '部門', x: 50, y: 56, size: 16, color: '#475569', weight: 'normal', align: 'center', isCustom: false, customText: '', previewText: '設計工作流開發組', fontFamily: "'Noto Sans TC', sans-serif", letterSpacing: '1px', lineHeight: 1.2 },
+      { id: 'field-3', key: '職稱', x: 50, y: 62, size: 14, color: '#64748b', weight: 'normal', align: 'center', isCustom: false, customText: '', previewText: '資深落地師', fontFamily: "'Noto Sans TC', sans-serif", letterSpacing: '1px', lineHeight: 1.2 },
+      { id: 'field-4', key: '編號', x: 50, y: 22, size: 12, color: '#2563eb', weight: 'bold', align: 'center', isCustom: true, customText: 'VIP 通行證', previewText: 'VIP', fontFamily: "'Noto Sans TC', sans-serif", letterSpacing: '2px', lineHeight: 1.2 }
+    ];
+
+    // 預設人員名單
+    let people = [
+      { '姓名': '陳小明', '部門': '設計工作流開發組', '職稱': '資深落地師' },
+      { '姓名': '林美玲', '部門': '行銷推廣部', '職稱': '專案經理' },
+      { '姓名': '張家豪', '部門': '技術研發部', '職稱': '後端工程師' },
+      { '姓名': '黃靜怡', '部門': '人資行政部', '職稱': '行政專員' }
+    ];
+
+    // 初始化載入
+    window.onload = function() {
+      lucide.createIcons();
+      initDragAndDrop();
+      initLocalConfig();
+      renderFieldsList();
+      renderDesignCanvas();
+      renderA4Preview();
+      updateLayout();
+    }
+
+    // --- Toast 提示功能 ---
+    function showToast(text, isError = false) {
+      const toast = document.getElementById('toast-notification');
+      const toastText = document.getElementById('toast-text');
+      const toastIcon = document.getElementById('toast-icon');
+
+      toastText.textContent = text;
+      if (isError) {
+        toastIcon.innerHTML = `<i data-lucide="alert-circle" class="w-4 h-4 text-rose-500"></i>`;
+      } else {
+        toastIcon.innerHTML = `<i data-lucide="check" class="w-4 h-4 text-emerald-400"></i>`;
+      }
+      lucide.createIcons();
+
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3000);
+    }
+
+    // 記憶快取載入
+    function initLocalConfig() {
+      const savedUrl = localStorage.getItem('badge_maker_v3_sheets_url');
+      if (savedUrl) {
+        document.getElementById('sheets-url').value = savedUrl;
+      }
+    }
+
+    // --- Google Sheets 教學折疊面板 ---
+    function toggleSheetsGuide() {
+      const guide = document.getElementById('sheets-guide');
+      guide.classList.toggle('hidden');
+    }
+
+    // --- 畫籤控制與切換 ---
+    function switchTab(tab) {
+      currentTab = tab;
+      const tabCanvas = document.getElementById('tab-canvas');
+      const tabA4 = document.getElementById('tab-a4');
+      const viewCanvas = document.getElementById('view-canvas');
+      const viewA4 = document.getElementById('view-a4');
+
+      if (tab === 'canvas') {
+        tabCanvas.className = "px-4 py-1.5 text-xs font-semibold rounded-md transition-all shadow-sm bg-white text-blue-600";
+        tabA4.className = "px-4 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900";
+        viewCanvas.classList.remove('hidden');
+        viewA4.classList.add('hidden');
+      } else {
+        tabCanvas.className = "px-4 py-1.5 text-xs font-semibold rounded-md transition-all text-slate-600 hover:text-slate-900";
+        tabA4.className = "px-4 py-1.5 text-xs font-semibold rounded-md transition-all shadow-sm bg-white text-blue-600";
+        viewCanvas.classList.add('hidden');
+        viewA4.classList.remove('hidden');
+        renderA4Preview();
+      }
+    }
+
+    // --- 圖片上傳、拖放與疊合對照設定 ---
+    function initDragAndDrop() {
+      // 乾淨底圖
+      const zoneBg = document.getElementById('drop-zone-bg');
+      const bgInput = document.getElementById('bg-upload');
+      zoneBg.addEventListener('click', () => bgInput.click());
+      bindDragEvents(zoneBg, (file) => handleBgFile(file));
+
+      bgInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) handleBgFile(e.target.files[0]);
+      });
+
+      // 完稿對照圖
+      const zoneRef = document.getElementById('drop-zone-ref');
+      const refInput = document.getElementById('ref-upload');
+      zoneRef.addEventListener('click', () => refInput.click());
+      bindDragEvents(zoneRef, (file) => handleRefFile(file));
+
+      refInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) handleRefFile(e.target.files[0]);
+      });
+
+      // 本地 CSV
+      document.getElementById('csv-upload').addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+          const file = e.target.files[0];
+          Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+              if (results.data && results.data.length > 0) {
+                people = results.data;
+                const statusEl = document.getElementById('csv-status');
+                statusEl.classList.remove('hidden');
+                document.getElementById('csv-status-text').textContent = `成功載入 ${people.length} 筆本地 CSV 名單！`;
+                showToast(`成功載入 ${people.length} 筆名單`);
+                renderA4Preview();
+              }
+            }
+          });
+        }
+      });
+    }
+
+    function bindDragEvents(el, callback) {
+      el.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        el.classList.add('border-blue-400', 'bg-blue-50/50');
+      });
+      el.addEventListener('dragleave', () => {
+        el.classList.remove('border-blue-400', 'bg-blue-50/50');
+      });
+      el.addEventListener('drop', (e) => {
+        e.preventDefault();
+        el.classList.remove('border-blue-400', 'bg-blue-50/50');
+        if (e.dataTransfer.files.length > 0) callback(e.dataTransfer.files[0]);
+      });
+    }
+
+    // 處理底圖
+    function handleBgFile(file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        bgImageData = event.target.result;
+        bgFileName = file.name;
+        
+        document.getElementById('bg-prompt').classList.add('hidden');
+        document.getElementById('bg-success').classList.remove('hidden');
+        document.getElementById('bg-name-text').textContent = file.name;
+
+        const designImg = document.getElementById('design-bg-img');
+        designImg.src = bgImageData;
+        designImg.classList.remove('hidden');
+        document.getElementById('design-bg-placeholder').classList.add('hidden');
+
+        showToast("乾淨底圖載入成功");
+        renderA4Preview();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // 處理完稿圖 (上傳完稿圖)
+    function handleRefFile(file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        refImageData = event.target.result;
+        
+        document.getElementById('ref-prompt').classList.add('hidden');
+        document.getElementById('ref-success').classList.remove('hidden');
+        document.getElementById('ref-name-text').textContent = file.name;
+
+        // 秀出透明度控制滑條
+        document.getElementById('opacity-control-panel').classList.remove('hidden');
+
+        // 更新視覺對照對比
+        const refImg = document.getElementById('design-ref-img');
+        refImg.src = refImageData;
+        refImg.classList.remove('hidden');
+
+        showToast("完稿圖疊合成功，拖曳以進行對齊對照");
+        renderDesignCanvas();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // 更新完稿圖不透明度
+    function updateRefOpacity(val) {
+      refOpacity = val;
+      document.getElementById('ref-opacity-val').textContent = `${val}%`;
+      const refImg = document.getElementById('design-ref-img');
+      if (refImg) {
+        refImg.style.opacity = val / 100;
+      }
+    }
+
+    // --- Google Sheets CSV 同步核心 ---
+    async function syncGoogleSheets() {
+      const url = document.getElementById('sheets-url').value.trim();
+      if (!url) {
+        showToast('請先貼上 Google 試算表 CSV 網址', true);
+        return;
+      }
+      if (!url.includes('output=csv')) {
+        showToast('格式不符：網址需包含 output=csv', true);
+        return;
+      }
+
+      const statusEl = document.getElementById('csv-status');
+      const statusText = document.getElementById('csv-status-text');
+      statusEl.classList.remove('hidden');
+      statusText.innerHTML = `<span class="flex items-center gap-1"><i data-lucide="refresh-cw" class="w-3.5 h-3.5 animate-spin"></i>從 Google Sheets 雲端同步中...</span>`;
+      lucide.createIcons();
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("HTTP 同步錯誤");
+        const csvText = await res.text();
+
+        Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+          complete: function(results) {
+            if (results.data && results.data.length > 0) {
+              people = results.data;
+              statusText.innerHTML = `已連結雲端！共同步 <strong class="text-blue-600">${people.length}</strong> 筆最新名單。`;
+              localStorage.setItem('badge_maker_v3_sheets_url', url);
+              showToast(`雲端成功同步 ${people.length} 筆資料`);
+              renderA4Preview();
+            } else {
+              statusText.innerHTML = `<span class="text-rose-500">同步失敗：CSV 中無有效欄位與資料</span>`;
+            }
+          }
+        });
+      } catch (error) {
+        console.error(error);
+        statusText.innerHTML = `<span class="text-rose-500">同步失敗：請確認網址的「發布狀態」與「CSV 逗號格式」。</span>`;
+        showToast('雲端連線失敗', true);
+      }
+    }
+
+    // 載入預設本地資料
+    function loadTemplateData() {
+      people = [
+        { '姓名': '王大同', '部門': '營運管理部', '職稱': '總監' },
+        { '姓名': '李曉華', '部門': '創意研發部', '職稱': '藝術指導' },
+        { '姓名': '林俊毅', '部門': '商務拓展組', '職稱': '拓展代表' },
+        { '姓名': '周佩芬', '部門': '公共關係部', '職稱': '公關經理' },
+        { '姓名': '吳冠宇', '部門': '數據分析組', '職稱': '工程師' },
+        { '姓名': '徐詩涵', '部門': '視覺設計部', '職稱': '設計師' }
+      ];
+      document.getElementById('csv-status').classList.remove('hidden');
+      document.getElementById('csv-status-text').textContent = `已成功載入 ${people.length} 筆預設範例名單。`;
+      showToast("載入範例名單");
+      renderA4Preview();
+    }
+
+    // --- 欄位與樣式編輯核心 ---
+    function renderFieldsList() {
+      const container = document.getElementById('fields-container');
+      container.innerHTML = '';
+
+      fields.forEach((field) => {
+        const isSelected = field.id === selectedFieldId;
+        const div = document.createElement('div');
+        div.className = `border rounded-xl p-3 text-xs transition-all duration-200 cursor-pointer ${isSelected ? 'border-blue-500 bg-blue-50/50 ring-1 ring-blue-500/20' : 'border-slate-200 hover:border-slate-300'}`;
+        
+        // 點選欄位載入屬性檢查器
+        div.onclick = (e) => {
+          // 防止點按鈕也觸發
+          if(e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.closest('button')) return;
+          selectField(field.id);
+        };
+
+        div.innerHTML = `
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-1.5 font-semibold text-slate-800">
+              <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${field.color}"></span>
+              <input type="text" value="${field.key}" onchange="updateFieldKey('${field.id}', this.value)" class="bg-transparent font-bold border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none w-24 py-0.5" title="點擊編輯對應 CSV 欄位名稱">
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] text-slate-400">(${field.x}%, ${field.y}%)</span>
+              <button onclick="deleteField('${field.id}', event)" class="p-1 text-slate-400 hover:text-rose-600 rounded">
+                <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-2 mt-2">
+            <div>
+              <select onchange="updateFieldType('${field.id}', this.value)" class="w-full text-[11px] p-1 border rounded-lg bg-white">
+                <option value="data" ${!field.isCustom ? 'selected' : ''}>連動名單資料</option>
+                <option value="custom" ${field.isCustom ? 'selected' : ''}>固定自訂文字</option>
+              </select>
+            </div>
+            <div>
+              <input type="text" value="${field.isCustom ? field.customText : field.previewText}" 
+                onchange="updateFieldText('${field.id}', this.value)" 
+                placeholder="${field.isCustom ? '固定顯示內文' : '預覽佔位內容'}"
+                class="w-full text-[11px] p-1 border rounded-lg focus:ring-1 focus:ring-blue-500">
+            </div>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+      lucide.createIcons();
+    }
+
+    // 選取特定欄位並更新檢查器 (編輯個別文字設定)
+    function selectField(id) {
+      selectedFieldId = id;
+      renderFieldsList();
+
+      // 更新定位拖曳的外觀
+      const labels = document.querySelectorAll('.draggable-label');
+      labels.forEach(lbl => {
+        if (lbl.dataset.id === id) {
+          lbl.className = "absolute draggable-label border-2 border-blue-500 ring-4 ring-blue-500/20 bg-blue-50/50 rounded cursor-move px-2 py-1 select-none z-10";
+        } else {
+          lbl.className = "absolute draggable-label border border-dashed border-slate-300 rounded cursor-move px-2 py-1 select-none hover:border-slate-400";
+        }
+      });
+
+      // 載入屬性至檢查器面板
+      const field = fields.find(f => f.id === id);
+      if (field) {
+        document.getElementById('inspector-placeholder').classList.add('hidden');
+        document.getElementById('field-inspector-panel').classList.remove('hidden');
+
+        document.getElementById('inspector-field-name').textContent = field.key;
+        document.getElementById('insp-x').value = field.x;
+        document.getElementById('insp-y').value = field.y;
+        document.getElementById('insp-font').value = field.fontFamily || "'Noto Sans TC', sans-serif";
+        document.getElementById('insp-size').value = field.size;
+        document.getElementById('insp-spacing').value = field.letterSpacing || '0px';
+        document.getElementById('insp-height').value = field.lineHeight || 1.2;
+        document.getElementById('insp-color').value = field.color;
+        
+        // 粗體外觀按鈕
+        const boldBtn = document.getElementById('insp-bold-btn');
+        if (field.weight === 'bold') {
+          boldBtn.className = "w-full py-1.5 px-3 border border-blue-500 bg-blue-100/50 text-blue-700 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1";
+        } else {
+          boldBtn.className = "w-full py-1.5 px-3 border border-slate-200 bg-white text-slate-600 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 hover:bg-slate-50";
+        }
+      } else {
+        closeInspector();
+      }
+    }
+
+    function closeInspector() {
+      document.getElementById('inspector-placeholder').classList.remove('hidden');
+      document.getElementById('field-inspector-panel').classList.add('hidden');
+    }
+
+    // 當檢查器數值改變，同步套用樣式
+    function applyInspectorChange() {
+      if (!selectedFieldId) return;
+      const field = fields.find(f => f.id === selectedFieldId);
+      if (field) {
+        field.x = parseFloat(document.getElementById('insp-x').value) || 0;
+        field.y = parseFloat(document.getElementById('insp-y').value) || 0;
+        field.fontFamily = document.getElementById('insp-font').value;
+        field.size = parseInt(document.getElementById('insp-size').value) || 12;
+        field.letterSpacing = document.getElementById('insp-spacing').value;
+        field.lineHeight = parseFloat(document.getElementById('insp-height').value) || 1.2;
+        field.color = document.getElementById('insp-color').value;
+
+        // 重新繪製預覽與 A4 紙張
+        renderDesignCanvas();
+        renderA4Preview();
+      }
+    }
+
+    function toggleInspectorBold() {
+      if (!selectedFieldId) return;
+      const field = fields.find(f => f.id === selectedFieldId);
+      if (field) {
+        field.weight = field.weight === 'bold' ? 'normal' : 'bold';
+        selectField(selectedFieldId); // 重載
+        renderDesignCanvas();
+        renderA4Preview();
+      }
+    }
+
+    // --- 欄位操作輔助常規函數 ---
+    function addField() {
+      const newId = `field-${Date.now()}`;
+      fields.push({
+        id: newId,
+        key: '新欄位',
+        x: 50,
+        y: 50,
+        size: 16,
+        color: '#1e293b',
+        weight: 'normal',
+        align: 'center',
+        isCustom: false,
+        customText: '',
+        previewText: '自訂內容',
+        fontFamily: "'Noto Sans TC', sans-serif",
+        letterSpacing: '0px',
+        lineHeight: 1.2
+      });
+      selectField(newId);
+      renderDesignCanvas();
+      showToast("成功建立新文字區塊");
+    }
+
+    function deleteField(id, event) {
+      if (event) event.stopPropagation();
+      fields = fields.filter(f => f.id !== id);
+      if (selectedFieldId === id) {
+        selectedFieldId = null;
+        closeInspector();
+      }
+      renderFieldsList();
+      renderDesignCanvas();
+      renderA4Preview();
+      showToast("區塊已刪除");
+    }
+
+    function updateFieldKey(id, val) {
+      const field = fields.find(f => f.id === id);
+      if (field) {
+        field.key = val;
+        renderDesignCanvas();
+        renderA4Preview();
+      }
+    }
+
+    function updateFieldType(id, val) {
+      const field = fields.find(f => f.id === id);
+      if (field) {
+        field.isCustom = (val === 'custom');
+        renderFieldsList();
+        renderDesignCanvas();
+        renderA4Preview();
+      }
+    }
+
+    function updateFieldText(id, val) {
+      const field = fields.find(f => f.id === id);
+      if (field) {
+        if (field.isCustom) {
+          field.customText = val;
+        } else {
+          field.previewText = val;
+        }
+        renderDesignCanvas();
+        renderA4Preview();
+      }
+    }
+
+    // --- 視覺對照與拖曳引擎 (Visual Canvas Drag and Drop Engine) ---
+    function renderDesignCanvas() {
+      const overlay = document.getElementById('design-labels-overlay');
+      overlay.innerHTML = '';
+
+      fields.forEach(field => {
+        const label = document.createElement('div');
+        label.dataset.id = field.id;
+        
+        const isSelected = field.id === selectedFieldId;
+        label.className = `absolute draggable-label rounded cursor-move px-2 py-1 select-none transition-shadow ${isSelected ? 'border-2 border-blue-500 ring-4 ring-blue-500/20 bg-blue-50/50 z-10' : 'border border-dashed border-slate-300 hover:border-slate-400'}`;
+        
+        // 設定定位
+        label.style.left = `${field.x}%`;
+        label.style.top = `${field.y}%`;
+        label.style.transform = 'translate(-50%, -50%)';
+        
+        // 套用極致字型設定
+        label.style.color = field.color;
+        label.style.fontSize = `${field.size * 0.75}px`; // canvas比例輕微縮放
+        label.style.fontWeight = field.weight === 'bold' ? '900' : 'normal';
+        label.style.fontFamily = field.fontFamily || 'inherit';
+        label.style.letterSpacing = field.letterSpacing || '0px';
+        label.style.lineHeight = field.lineHeight || 1.2;
+
+        label.textContent = field.isCustom ? (field.customText || '[固定內容]') : (field.previewText || `[${field.key}]`);
+
+        // 綁定點擊與滑鼠拖曳
+        label.addEventListener('mousedown', startDrag);
+        label.addEventListener('touchstart', startDrag, { passive: false });
+
+        overlay.appendChild(label);
+      });
+    }
+
+    function startDrag(e) {
+      e.preventDefault();
+      const label = e.currentTarget;
+      const fieldId = label.dataset.id;
+      selectField(fieldId);
+
+      const isTouch = e.type.startsWith('touch');
+      const startX = isTouch ? e.touches[0].clientX : e.clientX;
+      const startY = isTouch ? e.touches[0].clientY : e.clientY;
+
+      const container = document.getElementById('design-canvas-container');
+      const rect = container.getBoundingClientRect();
+
+      // 計算卡片中心錨點
+      const labelRect = label.getBoundingClientRect();
+      const offsetX = startX - (labelRect.left + labelRect.width / 2);
+      const offsetY = startY - (labelRect.top + labelRect.height / 2);
+
+      function doDrag(moveEvent) {
+        const currentX = isTouch ? moveEvent.touches[0].clientX : moveEvent.clientX;
+        const currentY = isTouch ? moveEvent.touches[0].clientY : moveEvent.clientY;
+
+        let pctX = ((currentX - rect.left - offsetX) / rect.width) * 100;
+        let pctY = ((currentY - rect.top - offsetY) / rect.height) * 100;
+
+        pctX = Math.max(0, Math.min(100, pctX));
+        pctY = Math.max(0, Math.min(100, pctY));
+
+        const field = fields.find(f => f.id === fieldId);
+        if (field) {
+          field.x = Math.round(pctX * 10) / 10;
+          field.y = Math.round(pctY * 10) / 10;
+          
+          label.style.left = `${field.x}%`;
+          label.style.top = `${field.y}%`;
+          
+          // 連動更新精微控制面板與即時座標
+          document.getElementById('coord-x').textContent = `${field.x.toFixed(1)}%`;
+          document.getElementById('coord-y').textContent = `${field.y.toFixed(1)}%`;
+          
+          // 如果當前欄位在檢查器中，同步更新數值
+          if (selectedFieldId === fieldId) {
+            document.getElementById('insp-x').value = field.x;
+            document.getElementById('insp-y').value = field.y;
+          }
+        }
+      }
+
+      function stopDrag() {
+        window.removeEventListener(isTouch ? 'touchmove' : 'mousemove', doDrag);
+        window.removeEventListener(isTouch ? 'touchend' : 'mouseup', stopDrag);
+        renderA4Preview();
+      }
+
+      window.addEventListener(isTouch ? 'touchmove' : 'mousemove', doDrag, { passive: false });
+      window.addEventListener(isTouch ? 'touchend' : 'mouseup', stopDrag);
+    }
+
+    // --- 版面配置與 A4 動態生成排版核心 (精密無縫切割設計) ---
+    function updateLayout() {
+      renderA4Preview();
+    }
+
+    function renderA4Preview() {
+      const container = document.getElementById('a4-pages-container');
+      container.innerHTML = '';
+
+      const orientation = document.getElementById('layout-orientation').value;
+      const cropSetting = document.getElementById('layout-crop').value;
+      const cols = parseInt(document.getElementById('layout-cols').value) || 2;
+      const rows = parseInt(document.getElementById('layout-rows').value) || 5;
+      const marginMm = parseFloat(document.getElementById('layout-margin').value) || 10;
+      const gapMm = parseFloat(document.getElementById('layout-gap').value) || 0;
+      const cardWidthMm = parseFloat(document.getElementById('card-width-mm').value) || 86;
+      const cardHeightMm = parseFloat(document.getElementById('card-height-mm').value) || 54;
+
+      const itemsPerPage = cols * rows;
+      const pageCount = Math.max(1, Math.ceil(people.length / itemsPerPage));
+      document.getElementById('page-count-badge').textContent = pageCount;
+
+      // 開始規劃分頁
+      for (let p = 0; p < pageCount; p++) {
+        const pageDiv = document.createElement('div');
+        pageDiv.className = `a4-page relative flex items-center justify-center ${orientation === 'portrait' ? 'a4-portrait' : 'a4-landscape'}`;
+        pageDiv.style.padding = `${marginMm}mm`;
+
+        // 核心網格：精準依自訂公厘規格排列
+        const gridDiv = document.createElement('div');
+        gridDiv.className = 'grid justify-center mx-auto';
+        gridDiv.style.gridTemplateColumns = `repeat(${cols}, ${cardWidthMm}mm)`;
+        gridDiv.style.gridTemplateRows = `repeat(${rows}, ${cardHeightMm}mm)`;
+        gridDiv.style.gap = `${gapMm}mm`;
+        gridDiv.style.width = 'max-content';
+        gridDiv.style.height = 'max-content';
+
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const index = p * itemsPerPage + (r * cols + c);
+            const person = people[index];
+
+            const cardCell = document.createElement('div');
+            cardCell.style.width = `${cardWidthMm}mm`;
+            cardCell.style.height = `${cardHeightMm}mm`;
+            
+            // 決定輔助線樣式 (實線/虛線/無縫拼接專用)
+            let borderClass = 'border-transparent';
+            if (cropSetting === 'true-dashed') {
+              borderClass = 'border border-dashed border-slate-300 print:border-slate-400';
+            } else if (cropSetting === 'true-solid') {
+              borderClass = 'border border-solid border-slate-200 print:border-slate-300';
+            }
+            cardCell.className = `relative overflow-hidden flex items-center justify-center bg-slate-50 ${borderClass}`;
+
+            if (person) {
+              // 背景底圖
+              if (bgImageData) {
+                const bgImg = document.createElement('img');
+                bgImg.src = bgImageData;
+                bgImg.className = 'absolute inset-0 w-full h-full object-cover';
+                cardCell.appendChild(bgImg);
+              } else {
+                cardCell.innerHTML = `<div class="absolute inset-0 flex items-center justify-center border border-dashed border-slate-200 text-slate-300 text-[10px]">A4底圖未載入</div>`;
+              }
+
+              // 文字覆蓋層
+              const overlayDiv = document.createElement('div');
+              overlayDiv.className = 'absolute inset-0';
+
+              fields.forEach(field => {
+                const txt = document.createElement('div');
+                txt.className = 'absolute';
+                txt.style.left = `${field.x}%`;
+                txt.style.top = `${field.y}%`;
+                txt.style.transform = 'translate(-50%, -50%)';
+                
+                // 套用自訂極致設定
+                txt.style.color = field.color;
+                txt.style.fontSize = `${field.size}px`;
+                txt.style.fontWeight = field.weight === 'bold' ? '900' : 'normal';
+                txt.style.textAlign = field.align;
+                txt.style.fontFamily = field.fontFamily || 'inherit';
+                txt.style.letterSpacing = field.letterSpacing || '0px';
+                txt.style.lineHeight = field.lineHeight || 1.2;
+                txt.style.whiteSpace = 'nowrap';
+
+                // 解析內容
+                if (field.isCustom) {
+                  txt.textContent = field.customText;
+                } else {
+                  txt.textContent = person[field.key] !== undefined ? person[field.key] : (person[field.previewText] || '');
+                }
+
+                overlayDiv.appendChild(txt);
+              });
+
+              cardCell.appendChild(overlayDiv);
+            } else {
+              // 空填充格
+              cardCell.innerHTML = `<div class="text-[9px] text-slate-300/40 select-none print:hidden">（空白補齊）</div>`;
+            }
+
+            gridDiv.appendChild(cardCell);
+          }
+        }
+
+        pageDiv.appendChild(gridDiv);
+        container.appendChild(pageDiv);
+      }
+    }
+  </script>
+</body>
+</html>
