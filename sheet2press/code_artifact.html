@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI 自動化識別證與桌牌排版系統 v0.6.0 Premium</title>
+  <title>AI 自動化識別證與桌牌排版系統 v0.6.1 Premium</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons -->
@@ -88,10 +88,10 @@
 </head>
 <body class="text-slate-800 antialiased min-h-screen flex flex-col pl-0 transition-all duration-300">
 
-  <!-- Floating Console Log Panel (leftmost) -->
-  <div id="floating-log-panel" class="fixed left-0 top-20 bottom-20 w-80 bg-slate-900 border-r border-slate-700 shadow-2xl rounded-r-2xl flex flex-col transition-transform duration-300 z-50 -translate-x-full no-print">
-    <!-- Toggle Handle Button -->
-    <button id="log-toggle-btn" onclick="toggleLogPanel()" class="absolute -right-12 top-6 bg-slate-900 border-y border-r border-slate-700 hover:bg-slate-800 text-indigo-400 hover:text-indigo-300 p-3 rounded-r-xl shadow-lg flex items-center justify-center transition-colors">
+  <!-- Floating Console Log Panel (Pure Overlay above all elements) -->
+  <div id="floating-log-panel" class="fixed left-0 top-4 bottom-4 w-80 bg-slate-950/95 backdrop-blur-md border border-slate-800 shadow-2xl rounded-r-2xl flex flex-col transition-transform duration-300 z-[9999] -translate-x-full no-print">
+    <!-- Toggle Handle Button (Always stays visible relative to the drawer edge) -->
+    <button id="log-toggle-btn" onclick="toggleLogPanel()" class="absolute -right-12 top-6 bg-slate-950 border-y border-r border-slate-800 hover:bg-slate-900 text-indigo-400 hover:text-indigo-300 p-3 rounded-r-xl shadow-lg flex items-center justify-center transition-colors z-[10000]">
       <i id="log-toggle-icon" data-lucide="terminal" class="w-5 h-5"></i>
     </button>
     <!-- Log Header -->
@@ -120,7 +120,7 @@
         <div>
           <h1 class="text-xl font-bold tracking-wider flex items-center gap-2">
             AI 自動化識別證與桌牌排版系統 
-            <span class="text-xs bg-indigo-500/30 border border-indigo-400 text-indigo-200 px-2.5 py-0.5 rounded-full font-medium">v0.6.0 Premium</span>
+            <span class="text-xs bg-indigo-500/30 border border-indigo-400 text-indigo-200 px-2.5 py-0.5 rounded-full font-medium">v0.6.1 Premium</span>
           </h1>
           <p class="text-xs text-slate-300 mt-0.5">設計工作流專家：底圖自由置入、AI 排版定位、外連雲端表格、A4 批量輸出</p>
         </div>
@@ -243,7 +243,7 @@
         </div>
       </div>
 
-      <!-- STEP 2: CSV Data & Google Sheets Import (RE-PRIORITIZED!) -->
+      <!-- STEP 2: CSV Data & Google Sheets Import -->
       <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="bg-slate-50 px-5 py-3.5 border-b border-slate-200 flex items-center justify-between">
           <h2 class="font-bold text-slate-800 text-sm flex items-center gap-2">
@@ -254,7 +254,7 @@
         </div>
         
         <div class="p-5 space-y-4">
-          <!-- Google Sheets 連線區域 (最重要，置頂常設) -->
+          <!-- Google Sheets 連線區域 -->
           <div class="space-y-2.5">
             <div class="flex items-center justify-between">
               <label class="block text-xs font-bold text-slate-700 flex items-center gap-1">
@@ -394,7 +394,7 @@
               </div>
             </div>
 
-            <!-- Individual Content Editor (加回個別文字編輯功能!) -->
+            <!-- Individual Content Editor -->
             <div id="inspector-content-section" class="hidden space-y-1.5">
               <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 <span id="label-content-type">自訂靜態文字內容</span>
@@ -549,7 +549,7 @@
 
       // Populate initialization logs
       addLog("系統初始化完成，已備妥 2x2 A6 識別證排版規格。", "success");
-      addLog("提示：您可以點擊畫面最左側的日誌拉條查看歷史狀態！");
+      addLog("提示：您可以點擊畫面最左側的日誌按鈕展開歷史執行細節！");
     };
 
     // Console Logging Helper
@@ -596,11 +596,9 @@
 
       if (logPanelOpen) {
         panel.classList.remove('-translate-x-full');
-        document.body.classList.add('pl-80');
         icon.setAttribute('data-lucide', 'x');
       } else {
         panel.classList.add('-translate-x-full');
-        document.body.classList.remove('pl-80');
         icon.setAttribute('data-lucide', 'terminal');
       }
       lucide.createIcons();
@@ -695,7 +693,7 @@
         addLog(text, "error");
       } else {
         iconWrapper.className = "bg-indigo-600 p-1.5 rounded-lg";
-        toast.className = "fixed bottom-6 right-6 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 transition-transform duration-300 z-50 text-sm no-print";
+        toast.className = "fixed bottom-6 right-6 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 transition-transform duration-300 z-[99999] text-sm no-print";
         addLog(text, "info");
       }
 
@@ -754,7 +752,7 @@
       });
     }
 
-    // Fetch Google Sheets Public CSV link (PRIORITIZED & FIXED!)
+    // Fetch Google Sheets Public CSV link
     function loadGoogleSheet() {
       const url = document.getElementById('google-sheet-url').value.trim();
       if (!url) {
@@ -849,13 +847,13 @@
       });
     }
 
-    // Call Gemini API with vision and structure mapping (Supported custom key and exponential backoff)
+    // Call Gemini API with vision and structure mapping
     async function triggerAIAnalyze() {
       const apiKey = document.getElementById('api-key').value.trim();
       const btn = document.getElementById('btn-ai-analyze');
       
       if (!apiKey) {
-        showToast("未偵測到 API 金鑰。已為您加載【黃金美學預設排版樣式】！");
+        showToast("未偵測到 API 金鑰。已為您自動載入【黃金美學預設排版樣式】！");
         autoPlaceIdealStyles();
         return;
       }
@@ -1163,7 +1161,7 @@
       document.getElementById('inspector-content-section').classList.remove('hidden');
       document.getElementById('inspector-styles-section').classList.remove('hidden');
 
-      // Update Individual Content input (加回個別文字編輯器)
+      // Update Individual Content input
       const isCustom = field.isCustom;
       const labelType = document.getElementById('label-content-type');
       const textInput = document.getElementById('style-field-text');
@@ -1189,7 +1187,7 @@
       refreshWorkspace();
     }
 
-    // Update Field Content (自訂靜態/欄位預覽文字修改)
+    // Update Field Content
     function updateSelectedFieldContent(value) {
       if (!selectedFieldId || !layoutFields[selectedFieldId]) return;
 
@@ -1224,7 +1222,7 @@
       const a4Container = document.getElementById('a4-pages-viewport');
       a4Container.innerHTML = "";
 
-      // Precise standard dimensions (100% matched to zero margins in physical mm)
+      // Precise standard dimensions
       let cardsPerPage = 4;
       let gridClass = "grid grid-cols-2 grid-rows-2 h-full w-full";
       let a4OrientationClass = "a4-portrait";
