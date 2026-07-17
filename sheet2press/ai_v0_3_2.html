@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI 自動化識別證排版系統 v0.3.2 - 專業增強版</title>
+  <title>AI 自動化識別證排版系統 v0.3.2 - 智慧增強版</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons -->
@@ -32,6 +32,21 @@
     .a4-landscape {
       width: 297mm;
       height: 210mm;
+    }
+    /* AI 掃描動態線條 */
+    @keyframes scan {
+      0% { top: 0%; }
+      50% { top: 100%; }
+      100% { top: 0%; }
+    }
+    .ai-scanning-line {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(to right, transparent, #3b82f6, transparent);
+      box-shadow: 0 0 10px #3b82f6;
+      animation: scan 2.5s linear infinite;
     }
     /* 列印專用 CSS */
     @media print {
@@ -81,9 +96,9 @@
       <div>
         <h1 class="text-lg font-bold text-slate-900 flex items-center gap-2">
           AI 自動化識別證排版系統
-          <span class="text-xs bg-blue-100 text-blue-700 font-bold px-2.5 py-0.5 rounded-full">v0.3.2 企業增強版</span>
+          <span class="text-xs bg-blue-100 text-blue-700 font-bold px-2.5 py-0.5 rounded-full">v0.3.2 智慧增強版</span>
         </h1>
-        <p class="text-xs text-slate-500">雲端 CSV 同步 • 完稿透明疊合對照 • 無縫極致拼接排版</p>
+        <p class="text-xs text-slate-500">雲端 CSV 同步 • Gemini 2.5 視覺排版自動定位 • A4 完美極致拼接</p>
       </div>
     </div>
     <div class="flex items-center gap-3">
@@ -94,7 +109,7 @@
     </div>
   </header>
 
-  <!-- 通知氣泡 (替換傳統 Alert 提升質感) -->
+  <!-- 通知氣泡 -->
   <div id="toast-notification" class="fixed bottom-5 right-5 bg-slate-900 text-white text-xs py-3 px-4 rounded-xl shadow-2xl flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50 pointer-events-none">
     <span id="toast-icon" class="text-emerald-400"><i data-lucide="info" class="w-4 h-4"></i></span>
     <span id="toast-text">設定已更新！</span>
@@ -103,7 +118,7 @@
   <!-- 主要內容區 -->
   <main class="flex-1 flex overflow-hidden h-[calc(100vh-73px)]">
     
-    <!-- 左側控制面板 (寬度調整) -->
+    <!-- 左側控制面板 -->
     <section class="no-print w-[430px] shrink-0 border-r border-slate-200 bg-white overflow-y-auto flex flex-col">
       
       <!-- 步驟 1: 置入底圖與名單 -->
@@ -148,13 +163,29 @@
           </div>
         </div>
 
-        <!-- 完稿圖疊合透明度控制 (僅在上傳完稿圖後作用) -->
-        <div id="opacity-control-panel" class="bg-slate-50 p-2.5 rounded-xl border border-slate-100 hidden">
-          <div class="flex items-center justify-between text-[11px] font-medium text-slate-600 mb-1">
-            <span class="flex items-center gap-1"><i data-lucide="sliders" class="w-3.5 h-3.5 text-indigo-500"></i>對照完稿圖透明度</span>
-            <span id="ref-opacity-val" class="font-bold text-indigo-600">50%</span>
+        <!-- AI 智慧定位按鈕與透明度控制 (上傳完稿圖後展開) -->
+        <div id="ai-position-panel" class="bg-gradient-to-br from-blue-50 to-indigo-50/50 p-3 rounded-xl border border-blue-100 hidden space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-blue-900 flex items-center gap-1">
+              <i data-lucide="cpu" class="w-4 h-4 text-blue-600 animate-pulse"></i> Gemini AI 智慧排版定位
+            </span>
+            <span class="text-[9px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold">免手動像素級定位</span>
           </div>
-          <input type="range" id="ref-opacity-slider" min="0" max="100" value="50" oninput="updateRefOpacity(this.value)" class="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+          <p class="text-[10px] text-slate-500 leading-relaxed">
+            上傳您的完稿對照圖後，點擊下方按鈕，AI 將自動辨識字體大小、精確 X/Y 網格座標、字體色碼並將對應欄位放置到位！
+          </p>
+          <button id="ai-detect-btn" onclick="runAiAutoPosition()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg text-xs flex items-center justify-center gap-1.5 transition active:scale-98 shadow-sm">
+            <i data-lucide="sparkles" class="w-4 h-4 text-amber-300"></i>
+            AI 智慧對齊與偵測
+          </button>
+          
+          <div class="border-t border-slate-200/50 pt-2">
+            <div class="flex items-center justify-between text-[11px] font-medium text-slate-600 mb-1">
+              <span class="flex items-center gap-1"><i data-lucide="sliders" class="w-3.5 h-3.5 text-indigo-500"></i>對照完稿圖透明度</span>
+              <span id="ref-opacity-val" class="font-bold text-indigo-600">50%</span>
+            </div>
+            <input type="range" id="ref-opacity-slider" min="0" max="100" value="50" oninput="updateRefOpacity(this.value)" class="w-full h-1 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+          </div>
         </div>
 
         <!-- 名單來源：CSV & Google Sheets -->
@@ -162,24 +193,24 @@
           <label class="block text-xs font-semibold text-slate-600">名單與雲端資料連結</label>
           
           <!-- Google Sheets 連結區 -->
-          <div class="space-y-1.5 bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+          <div class="space-y-1.5 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100">
             <div class="flex items-center justify-between">
-              <span class="text-[11px] font-bold text-blue-800 flex items-center gap-1">
+              <span class="text-[11px] font-bold text-emerald-800 flex items-center gap-1">
                 <i data-lucide="link" class="w-3.5 h-3.5"></i>Google Sheets CSV 發布網址
               </span>
-              <button onclick="toggleSheetsGuide()" class="text-[10px] text-blue-600 hover:underline">教學說明</button>
+              <button onclick="toggleSheetsGuide()" class="text-[10px] text-emerald-600 hover:underline">教學說明</button>
             </div>
             
             <div id="sheets-guide" class="hidden text-[10px] text-slate-500 bg-white p-2.5 rounded-lg border border-slate-200 leading-relaxed mb-2 space-y-1">
               <p class="font-semibold text-slate-700">📌 雲端試算表設定方式：</p>
               <p>1. 點擊頂端「檔案」➔「共用」➔「發布到網路」</p>
               <p>2. 選擇「整份文件」或指定工作表，右側下拉選單改選為<strong class="text-blue-600">「逗號分隔值 (.csv)」</strong></p>
-              <p>3. 點擊發布，複製產生的網址貼在下方，點點同步即可！</p>
+              <p>3. 點擊發布，複製產生的網址貼在下方，點擊同步即可！</p>
             </div>
 
             <div class="flex gap-1.5">
-              <input type="text" id="sheets-url" placeholder="貼上發布為 .csv 的連結網址" class="flex-1 text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-white">
-              <button onclick="syncGoogleSheets()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition shrink-0">
+              <input type="text" id="sheets-url" placeholder="貼上發布為 .csv 的連結網址" class="flex-1 text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-emerald-500 focus:outline-none bg-white">
+              <button onclick="syncGoogleSheets()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition shrink-0">
                 同步雲端
               </button>
             </div>
@@ -223,7 +254,7 @@
             <!-- 欄位卡片動態插入 -->
           </div>
 
-          <!-- 個別詳細微調面板 (Selected Field Property Inspector) -->
+          <!-- 個別詳細微調面板 -->
           <div id="field-inspector-panel" class="border border-blue-200 bg-blue-50/20 rounded-xl p-4 space-y-3 hidden">
             <div class="flex items-center justify-between border-b border-slate-200/50 pb-2">
               <span class="text-xs font-bold text-slate-950 flex items-center gap-1">
@@ -408,6 +439,16 @@
           <!-- 視覺化畫布 (動態調整比例) -->
           <div id="design-canvas-container" class="relative w-[340px] h-[480px] bg-slate-50 rounded-xl border border-slate-200 overflow-hidden shadow-inner flex items-center justify-center">
             
+            <!-- AI 智慧視覺掃描特效層 -->
+            <div id="ai-scanning-overlay" class="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px] hidden flex flex-col items-center justify-center z-20 text-white">
+              <div class="ai-scanning-line"></div>
+              <div class="bg-slate-900/90 p-4 rounded-xl border border-blue-500/30 flex flex-col items-center gap-2 max-w-[85%] text-center shadow-2xl animate-pulse">
+                <i data-lucide="cpu" class="w-8 h-8 text-blue-400"></i>
+                <span class="text-xs font-bold text-blue-100">Gemini AI 智慧視覺分析中...</span>
+                <span class="text-[9px] text-slate-400">正在自動偵測文字字體大小、十六進位色碼、與精確 $X,Y$ 網格座標比例</span>
+              </div>
+            </div>
+
             <!-- 乾淨底圖預覽 -->
             <img id="design-bg-img" src="" class="absolute inset-0 w-full h-full object-cover select-none pointer-events-none hidden">
             
@@ -636,15 +677,15 @@
         document.getElementById('ref-success').classList.remove('hidden');
         document.getElementById('ref-name-text').textContent = file.name;
 
-        // 秀出透明度控制滑條
-        document.getElementById('opacity-control-panel').classList.remove('hidden');
+        // 秀出 AI 定位與透明度控制面板
+        document.getElementById('ai-position-panel').classList.remove('hidden');
 
         // 更新視覺對照對比
         const refImg = document.getElementById('design-ref-img');
         refImg.src = refImageData;
         refImg.classList.remove('hidden');
 
-        showToast("完稿圖疊合成功，拖曳以進行對齊對照");
+        showToast("完稿對照圖已疊合，您可以點選 AI 排版一鍵定位對齊");
         renderDesignCanvas();
       };
       reader.readAsDataURL(file);
@@ -658,6 +699,167 @@
       if (refImg) {
         refImg.style.opacity = val / 100;
       }
+    }
+
+    // --- Gemini 2.5 視覺 AI 自動定位排版核心 ---
+    async function runAiAutoPosition() {
+      if (!refImageData) {
+        showToast("請先上傳完稿對照圖作為 AI 解析參考！", true);
+        return;
+      }
+      
+      const apiKey = ""; // 執行環境會在運行時自動注入 Key
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+      
+      const base64Parts = refImageData.split(',');
+      if (base64Parts.length < 2) {
+        showToast("完稿圖片格式異常", true);
+        return;
+      }
+      const mimeType = refImageData.split(';')[0].split(':')[1] || "image/png";
+      const base64Data = base64Parts[1];
+
+      setAiLoading(true);
+
+      const systemPrompt = `你是一個專業的前端 UI/UX 設計師與極致印刷排版工程師。
+你的任務是深度分析使用者上傳的「識別證完稿對照圖 (Reference Design)」，並從中自動偵測所有需要動態代入資料的文字區塊位置（例如：姓名、部門、職稱、編號、Name、Date等）。
+針對你辨識出的每一個欄位，你必須回傳以下精確的網頁 CSS 定位參數，使其在預覽時能完美對齊底圖：
+1. key: 文字的邏輯屬性名稱（如 姓名, 部門, 職稱, 編號，盡量對應標準中文欄位名稱）。
+2. x: 水平中心點位置比例百分比 (0-100)，最左側為 0%，最右側為 100%。
+3. y: 垂直中心點位置比例百分比 (0-100)，最頂部為 0%，最底部為 100%。
+4. size: 字體大小估計 (px)，通常在 10px 到 36px 之間。
+5. color: 該文字在完稿圖中使用的 Hex 網頁色碼（如 #1e293b）。
+6. weight: 粗體 ("bold" 或 "normal")。
+7. align: 對齊方式 ("left", "center", "right")。
+
+請精確微調百分比參數，力求像素級重合。一律以 JSON Schema 規定的結構輸出。`;
+
+      const userQuery = "請幫我分析這張識別證完稿，智慧辨識出上面所有的欄位，並抓取它們在卡片中精準的對應位置百分比座標與樣式。";
+
+      const payload = {
+        contents: [{
+          parts: [
+            { text: userQuery },
+            {
+              inlineData: {
+                mimeType: mimeType,
+                data: base64Data
+              }
+            }
+          ]
+        }],
+        systemInstruction: {
+          parts: [{ text: systemPrompt }]
+        },
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              fields: {
+                type: "ARRAY",
+                description: "辨識成功的文字定位欄位列表",
+                items: {
+                  type: "OBJECT",
+                  properties: {
+                    key: { type: "STRING", description: "欄位名稱（如 姓名, 部門, 職稱）" },
+                    x: { type: "NUMBER", description: "水平中心百分比 (0-100)，可帶小數點" },
+                    y: { type: "NUMBER", description: "垂直中心百分比 (0-100)，可帶小數點" },
+                    size: { type: "NUMBER", description: "字體大小建議值" },
+                    color: { type: "STRING", description: "十六進位顏色色碼" },
+                    weight: { type: "STRING", enum: ["bold", "normal"] },
+                    align: { type: "STRING", enum: ["left", "center", "right"] }
+                  },
+                  required: ["key", "x", "y", "size", "color", "weight", "align"]
+                }
+              }
+            },
+            required: ["fields"]
+          }
+        }
+      };
+
+      // 智慧重試機制 (含指數型退避 5 次)
+      const fetchWithRetry = async (url, options, maxRetries = 5) => {
+        let delay = 1000;
+        for (let i = 0; i < maxRetries; i++) {
+          try {
+            const response = await fetch(url, options);
+            if (response.ok) return response;
+          } catch (e) {
+            // 自動重試
+          }
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2;
+        }
+        throw new Error("API 伺服器忙碌中，請稍後重試。");
+      };
+
+      try {
+        const response = await fetchWithRetry(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!jsonText) {
+          throw new Error("AI 辨識結果解析失敗");
+        }
+
+        const data = JSON.parse(jsonText);
+        if (data && data.fields && data.fields.length > 0) {
+          // 覆蓋當前欄位配置
+          fields = data.fields.map((f, i) => ({
+            id: `field-${Date.now()}-${i}`,
+            key: f.key,
+            x: Math.round(f.x * 10) / 10,
+            y: Math.round(f.y * 10) / 10,
+            size: f.size,
+            color: f.color,
+            weight: f.weight,
+            align: f.align,
+            isCustom: false,
+            customText: "",
+            previewText: f.key === "姓名" ? "陳小明" : f.key === "部門" ? "設計工作流開發組" : f.key === "職稱" ? "資深落地師" : "預覽文字",
+            fontFamily: "'Noto Sans TC', sans-serif",
+            letterSpacing: '0px',
+            lineHeight: 1.2
+          }));
+
+          selectedFieldId = fields[0].id; // 預設點選第一個
+          renderFieldsList();
+          renderDesignCanvas();
+          renderA4Preview();
+          showToast(`✨ AI 排版定位完成！成功對齊 ${fields.length} 個文字區塊`);
+        } else {
+          showToast("AI 未能辨識出有效定位欄位，請嘗試使用高清晰度完稿圖", true);
+        }
+      } catch (err) {
+        console.error(err);
+        showToast(err.message || "AI 排版定位發生問題，請手動拖曳對齊", true);
+      } finally {
+        setAiLoading(false);
+      }
+    }
+
+    // AI 載入狀態樣式更新
+    function setAiLoading(isLoading) {
+      const overlay = document.getElementById('ai-scanning-overlay');
+      const btn = document.getElementById('ai-detect-btn');
+      if (isLoading) {
+        overlay.classList.remove('hidden');
+        btn.disabled = true;
+        btn.innerHTML = `<span class="flex items-center gap-1.5"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> AI 視覺分析定位中...</span>`;
+      } else {
+        overlay.classList.add('hidden');
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="sparkles" class="w-4 h-4 text-amber-300"></i> AI 智慧對齊與偵測`;
+      }
+      lucide.createIcons();
     }
 
     // --- Google Sheets CSV 同步核心 ---
@@ -733,7 +935,6 @@
         
         // 點選欄位載入屬性檢查器
         div.onclick = (e) => {
-          // 防止點按鈕也觸發
           if(e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.closest('button')) return;
           selectField(field.id);
         };
