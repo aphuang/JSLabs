@@ -1,0 +1,1740 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>套版工坊 — 海報自動排版產出</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+HK:wght@400;700&family=Noto+Serif+HK:wght@400;700&family=LXGW+WenKai+TC&family=Iansui&family=Chiron+Hei+HK&family=Questrial&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    /* sage-dashboard palette */
+    --paper:#AEB6A0;
+    --card:#FFFFFF;
+    --card-dark:#191A18;
+    --card-dark-text:#F4F5EF;
+    --card-soft:#E9E8E1;
+    --ink:#1C1D1B;
+    --ink-soft:#6C7266;
+    --line:#E1DFD6;
+    --line-strong:#C9C7BC;
+    --accent:#E3F24E;
+    --accent-ink:#1C1D1B;
+    --warn:#B4791F;
+    --warn-soft:#F1E3C8;
+    --err:#C1503C;
+    --err-soft:#F3DAD3;
+    --ok:#4C8C5B;
+    --ok-soft:#DCEBDD;
+    --radius-lg:22px;
+    --radius-md:14px;
+    --radius-pill:999px;
+    --shadow-card:0 1px 2px rgba(20,20,15,.04), 0 10px 28px rgba(20,20,15,.08);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Space Grotesk', sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  a{color:inherit;}
+
+  /* ---------- shell ---------- */
+  .shell{
+    display:grid;
+    grid-template-columns:264px 1fr;
+    min-height:100vh;
+    gap:20px;
+    padding:20px;
+  }
+  .rail{
+    background:var(--card-dark);
+    color:var(--card-dark-text);
+    border-radius:var(--radius-lg);
+    padding:30px 22px;
+    position:sticky;
+    top:20px;
+    align-self:start;
+    height:calc(100vh - 40px);
+    overflow-y:auto;
+    box-shadow:var(--shadow-card);
+  }
+  .brand{
+    font-weight:700;
+    font-size:20px;
+    letter-spacing:.2px;
+    margin:0 0 4px;
+  }
+  .brand-sub{
+    font-size:12.5px;
+    color:#B9BBB2;
+    margin:0 0 26px;
+    line-height:1.55;
+  }
+  .steps{list-style:none;margin:0;padding:0;}
+  .steps li{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    padding:9px 10px;
+    margin-bottom:4px;
+    border-radius:var(--radius-pill);
+    cursor:pointer;
+    opacity:.55;
+    transition:opacity .2s ease, background .2s ease;
+  }
+  .steps li:hover{opacity:.8;}
+  .steps li.active{opacity:1; background:var(--accent); color:var(--accent-ink);}
+  .steps li.done{opacity:.9;}
+  .steps li .num{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    width:20px;height:20px;
+    border:1px solid #6B6E67;
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .steps li.active .num{background:var(--accent-ink);border-color:var(--accent-ink);color:var(--accent);}
+  .steps li.done .num{background:#3A3C37;border-color:#3A3C37;color:#F4F5EF;}
+  .steps li .label{font-size:13px; padding-top:1px;}
+
+  .main{padding:0 4px 60px; max-width:1000px;}
+  .panel{
+    background:var(--card);
+    border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-card);
+    padding:28px 30px;
+    margin-bottom:20px;
+    transition:opacity .35s ease;
+  }
+  .panel[data-locked="1"]{
+    opacity:.4;
+    pointer-events:none;
+  }
+  .panel h2{
+    font-size:16px;
+    margin:0 0 4px;
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+  }
+  .panel h2 .idx{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--accent-ink);
+    background:var(--accent); border-radius:var(--radius-pill); padding:2px 9px;
+  }
+  .panel .hint{
+    font-size:13px;
+    color:var(--ink-soft);
+    margin:0 0 18px;
+    line-height:1.6;
+    max-width:64ch;
+  }
+
+  label{display:block; font-size:12.5px; color:var(--ink-soft); margin-bottom:6px;}
+  input[type=text], input[type=password], input[type=number], select, textarea{
+    width:100%;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    padding:10px 12px;
+    border:1px solid var(--line-strong);
+    background:var(--card-soft);
+    color:var(--ink);
+    border-radius:var(--radius-md);
+  }
+  input[type=color]{padding:3px; height:38px; cursor:pointer;}
+  input:focus, select:focus, textarea:focus{
+    outline:2px solid var(--ink);
+    outline-offset:1px;
+  }
+  .row{display:flex; gap:16px; flex-wrap:wrap;}
+  .field{flex:1; min-width:180px; margin-bottom:14px;}
+
+  button{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size:13.5px;
+    padding:12px 22px;
+    border:1px solid var(--ink);
+    background:var(--ink);
+    color:var(--card);
+    cursor:pointer;
+    border-radius:var(--radius-pill);
+  }
+  button.secondary{background:transparent; color:var(--ink); border-color:var(--line-strong);}
+  button.press{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
+  button:disabled{opacity:.35; cursor:not-allowed;}
+  button:hover:not(:disabled){filter:brightness(1.05);}
+
+  .upload-box{
+    border:1.5px dashed var(--line-strong);
+    border-radius:var(--radius-md);
+    padding:18px;
+    display:flex;
+    gap:16px;
+    align-items:center;
+    cursor:pointer;
+    background:var(--card-soft);
+  }
+  .upload-box:hover{border-color:var(--ink);}
+  .upload-box .thumb{
+    width:88px;height:118px;
+    border-radius:8px;
+    border:1px solid var(--line);
+    background:repeating-linear-gradient(45deg,#eee,#eee 6px,#f7f7f5 6px,#f7f7f5 12px);
+    object-fit:cover;
+    flex-shrink:0;
+  }
+  .upload-box .txt{font-size:13px; color:var(--ink-soft); line-height:1.6;}
+  .upload-box .txt b{color:var(--ink); display:block; font-size:14px; margin-bottom:2px;}
+
+  .log{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    background:var(--card-dark);
+    color:var(--card-dark-text);
+    padding:16px 18px;
+    border-radius:var(--radius-md);
+    max-height:220px;
+    overflow-y:auto;
+    line-height:1.9;
+  }
+  .log .l-ok{color:#B7EBA0;}
+  .log .l-warn{color:#F2C879;}
+  .log .l-err{color:#F2A38F;}
+  .log .t{color:#8A8F84; margin-right:8px;}
+
+  .progressbar{
+    height:7px; background:var(--card-soft); overflow:hidden; margin:14px 0 4px; border-radius:var(--radius-pill);
+  }
+  .progressbar > div{height:100%; width:0%; background:var(--accent); transition:width .3s ease;}
+
+  table.map-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.map-table th{
+    text-align:left; font-weight:600; color:var(--ink-soft);
+    font-size:11px; padding:8px; border-bottom:1px solid var(--line-strong);
+    white-space:nowrap;
+  }
+  table.map-table td{padding:7px 8px; border-bottom:1px solid var(--line); vertical-align:middle;}
+  table.map-table input, table.map-table select{padding:6px 7px; font-size:12px; border-radius:8px;}
+  table.map-table input[type=color]{padding:2px; height:30px; border-radius:8px;}
+  table.map-table input[type=number]{width:58px;}
+
+  .badge{
+    display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:10.5px;
+    padding:3px 9px; border-radius:var(--radius-pill); border:1px solid currentColor;
+  }
+  .badge.ok{color:var(--ok); background:var(--ok-soft); border-color:transparent;}
+  .badge.warn{color:var(--warn); background:var(--warn-soft); border-color:transparent;}
+  .badge.err{color:var(--err); background:var(--err-soft); border-color:transparent;}
+
+  .overlay-wrap{
+    display:inline-block; border-radius:var(--radius-md); overflow:hidden;
+    border:1px solid var(--line); background:var(--card-soft); padding:4px;
+  }
+  .overlay-wrap canvas{display:block; max-width:100%; height:auto; border-radius:10px;}
+
+  .warn-list{list-style:none; margin:14px 0 0; padding:0; font-size:12.5px;}
+  .warn-list li{padding:7px 0; border-top:1px solid var(--line); color:var(--ink-soft);}
+  .warn-list li:first-child{border-top:none;}
+  .warn-list li b{color:var(--warn);}
+
+  .proof-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(190px,1fr));
+    gap:18px;
+    margin-top:6px;
+  }
+  .proof-card{
+    background:var(--card-soft); border-radius:var(--radius-md); padding:10px;
+    position:relative;
+  }
+  .proof-card .chip{
+    position:absolute; top:18px; left:18px;
+    background:var(--accent); color:var(--accent-ink);
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600;
+    padding:3px 9px; border-radius:var(--radius-pill);
+  }
+  .proof-card img{width:100%; display:block; border-radius:10px; cursor:zoom-in;}
+  .proof-card .cap{font-family:'IBM Plex Mono',monospace; font-size:11px; margin-top:8px; color:var(--ink-soft);}
+
+  .modal{
+    position:fixed; inset:0; background:rgba(20,21,18,.92);
+    display:none; align-items:center; justify-content:center; z-index:50; padding:30px;
+  }
+  .modal.show{display:flex;}
+  .modal img{max-width:100%; max-height:100%; border-radius:8px; box-shadow:0 0 0 1px rgba(255,255,255,.15);}
+
+  .footer-actions{display:flex; gap:12px; flex-wrap:wrap; margin-top:18px;}
+  .small-note{font-size:11.5px; color:var(--ink-soft); margin-top:8px;}
+
+  .version-badge{
+    position:fixed;
+    top:16px; right:16px;
+    z-index:60;
+    background:var(--card-dark);
+    color:var(--card-dark-text);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    padding:5px 13px;
+    border-radius:var(--radius-pill);
+    box-shadow:var(--shadow-card);
+    letter-spacing:.02em;
+    pointer-events:none;
+  }
+
+  .row-editor-panel{
+    background:var(--card); border-radius:var(--radius-lg); padding:26px;
+    max-width:640px; width:100%; max-height:90vh; overflow-y:auto;
+  }
+  .row-editor-panel h3{margin:0 0 4px; font-size:15px;}
+  .row-editor-panel .hint{margin:0 0 16px;}
+  .row-editor-field{margin-bottom:12px;}
+  .row-editor-field label{font-size:12px; color:var(--ink-soft); margin-bottom:4px; display:block;}
+  .row-editor-field textarea{
+    width:100%; font-family:'Space Grotesk',sans-serif; font-size:13px;
+    padding:9px 11px; border:1px solid var(--line-strong); border-radius:10px;
+    resize:vertical; min-height:44px; background:var(--card-soft); color:var(--ink);
+  }
+  .card-edit-btn{margin-top:8px; width:100%; padding:7px 10px; font-size:12px;}
+  .overflow-badge{margin-top:6px;}
+
+  ::-webkit-scrollbar{width:9px; height:9px;}
+  ::-webkit-scrollbar-thumb{background:var(--line-strong); border-radius:99px;}
+
+  @media (max-width:860px){
+    .shell{grid-template-columns:1fr;}
+    .rail{position:relative; height:auto; display:flex; flex-direction:column;}
+    .main{padding:0;}
+  }
+</style>
+</head>
+<body>
+<div class="version-badge">v0.08</div>
+
+<div class="shell">
+  <nav class="rail">
+    <p class="brand">套版工坊</p>
+    <p class="brand-sub">上傳成品海報與去字底圖，AI 讀出文字排版規則，逐筆套入試算表資料，輸出整批可印稿件。</p>
+    <p class="mono" id="progressLabel" style="font-size:11px; color:#9EA196; margin:0 0 16px;">進度　0 / 9</p>
+    <ul class="steps" id="stepNav">
+      <li data-step="1"><span class="num">1</span><span class="label">AI 模型設定</span></li>
+      <li data-step="2"><span class="num">2</span><span class="label">上傳海報 A（完稿）</span></li>
+      <li data-step="3"><span class="num">3</span><span class="label">上傳海報 B（去字底圖）</span></li>
+      <li data-step="4"><span class="num">4</span><span class="label">連接 Google 試算表</span></li>
+      <li data-step="5"><span class="num">5</span><span class="label">辨識海報 A 排版</span></li>
+      <li data-step="6"><span class="num">6</span><span class="label">欄位對應與微調</span></li>
+      <li data-step="7"><span class="num">7</span><span class="label">套版與格式檢查</span></li>
+      <li data-step="8"><span class="num">8</span><span class="label">預覽成果</span></li>
+      <li data-step="9"><span class="num">9</span><span class="label">輸出列印</span></li>
+    </ul>
+  </nav>
+
+  <main class="main">
+
+    <!-- STEP 1 -->
+    <section class="panel" id="panel-1">
+      <h2><span class="idx">01</span>AI 模型設定</h2>
+      <p class="hint">選擇用來辨識海報文字排版的視覺模型，並輸入該服務的 API 金鑰。金鑰只會留在這個分頁的記憶體中，不會被儲存或送到其他地方。</p>
+      <div class="row">
+        <div class="field">
+          <label for="provider">模型服務</label>
+          <select id="provider">
+            <option value="anthropic">Anthropic Claude（建議，支援瀏覽器直連）</option>
+            <option value="openai">OpenAI GPT-4o</option>
+            <option value="gemini">Google Gemini</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="apiKey">API 金鑰</label>
+          <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off">
+        </div>
+      </div>
+      <div class="row" style="align-items:center; margin-top:-6px;">
+        <label style="display:flex; align-items:center; gap:8px; margin:0; cursor:pointer;">
+          <input type="checkbox" id="quickMode" style="width:auto;">
+          <span>加速模式（改用較快、較輕量的模型，準確度略降）</span>
+        </label>
+      </div>
+      <div class="footer-actions">
+        <button id="btnSaveKey" class="press">儲存設定，前往上傳海報</button>
+      </div>
+      <p class="small-note" id="providerNote"></p>
+    </section>
+
+    <!-- STEP 2 -->
+    <section class="panel" data-locked="1" id="panel-2">
+      <h2><span class="idx">02</span>上傳海報 A（設計完成稿）</h2>
+      <p class="hint">上傳已排好版、含所有文字的 A3 完稿圖，系統會從這張圖上讀出文字的字型、顏色、大小、邊框與位置。</p>
+      <div class="upload-box" id="dropA">
+        <img class="thumb" id="thumbA" alt="">
+        <div class="txt"><b id="nameA">尚未選擇檔案</b>點按此處或拖曳圖片到這裡上傳（JPG / PNG）</div>
+      </div>
+      <input type="file" id="fileA" accept="image/*" style="display:none">
+      <div class="footer-actions"><button id="btnToStep3" class="press" disabled>下一步</button></div>
+    </section>
+
+    <!-- STEP 3 -->
+    <section class="panel" data-locked="1" id="panel-3">
+      <h2><span class="idx">03</span>上傳海報 B（去除文字的底圖）</h2>
+      <p class="hint">上傳與海報 A 版面相同、但拿掉所有文字的乾淨底圖，最終的批次成品會畫在這張圖上面。</p>
+      <div class="upload-box" id="dropB">
+        <img class="thumb" id="thumbB" alt="">
+        <div class="txt"><b id="nameB">尚未選擇檔案</b>點按此處或拖曳圖片到這裡上傳（JPG / PNG）</div>
+      </div>
+      <input type="file" id="fileB" accept="image/*" style="display:none">
+      <div class="footer-actions"><button id="btnToStep4" class="press" disabled>下一步</button></div>
+    </section>
+
+    <!-- STEP 4 -->
+    <section class="panel" data-locked="1" id="panel-4">
+      <h2><span class="idx">04</span>連接 Google 試算表</h2>
+      <p class="hint">在 Google 試算表選「檔案 → 共用 → 發布到網路」，格式選 CSV，把發布出來的連結貼在下面。第一列須為欄位名稱，之後每一列代表一張要產出的海報。</p>
+      <div class="field">
+        <label for="csvUrl">已發布的 CSV 連結</label>
+        <input type="text" id="csvUrl" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
+      </div>
+      <div class="footer-actions">
+        <button id="btnLoadCsv" class="press">讀取資料表</button>
+      </div>
+      <div id="csvPreviewWrap" style="display:none; margin-top:18px;">
+        <p class="mono small-note" id="csvSummary"></p>
+        <div style="overflow-x:auto;">
+          <table class="map-table" id="csvPreviewTable"></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 5 -->
+    <section class="panel" data-locked="1" id="panel-5">
+      <h2><span class="idx">05</span>辨識海報 A 排版</h2>
+      <p class="hint">按下開始，AI 會逐一找出海報 A 上的文字區塊，記錄每個區塊的字體、顏色、大小、邊框、對齊與位置。過程會列在下方進度紀錄中。</p>
+      <div class="footer-actions"><button id="btnAnalyze" class="press">開始製圖</button></div>
+      <div class="progressbar"><div id="progressFill"></div></div>
+      <div class="log" id="logBox"></div>
+
+      <div id="recordsBox" style="margin-top:20px; padding-top:18px; border-top:1px solid var(--line);">
+        <p class="hint" style="margin-bottom:10px;">或者，如果這張海報用過之前存下來的版型設定，可以直接套用，跳過辨識這一步。</p>
+        <div class="row" style="align-items:flex-end;">
+          <div class="field" style="flex:2;">
+            <label for="recordSelect">已儲存的版型（<span id="recordCount">0</span>/10）</label>
+            <select id="recordSelect"><option value="">— 尚無紀錄 —</option></select>
+          </div>
+          <div class="field" style="flex:0 0 auto; margin-bottom:14px;">
+            <button id="btnApplyRecord" class="secondary" type="button">套用這個版型</button>
+          </div>
+          <div class="field" style="flex:0 0 auto; margin-bottom:14px;">
+            <button id="btnDeleteRecord" class="secondary" type="button">刪除這筆</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STEP 6 -->
+    <section class="panel" data-locked="1" id="panel-6">
+      <h2><span class="idx">06</span>欄位對應與微調</h2>
+      <p class="hint">系統已自動比對辨識出的文字區塊與試算表欄位，並用實際像素校正過顏色。方框畫在海報 A 的位置上：可直接拖曳方框移動、拖右下角小方塊調整大小，或在下方表格微調對應欄位、座標、字型與邊框樣式。</p>
+      <div class="overlay-wrap" id="overlayWrap"></div>
+      <div style="overflow-x:auto; margin-top:18px;">
+        <table class="map-table" id="mapTable">
+          <thead><tr>
+            <th>辨識欄位</th><th>對應試算表欄位</th><th>X</th><th>Y</th><th>寬</th><th>高</th>
+            <th>字級</th><th>字型</th><th>字重</th><th>對齊</th><th>顏色</th><th>邊框顏色</th><th>邊框粗細</th>
+            <th>字距</th><th>行距</th>
+          </tr></thead>
+          <tbody id="mapTableBody"></tbody>
+        </table>
+      </div>
+      <div class="footer-actions">
+        <button id="btnConfirmMap" class="press">確認對應，開始套版</button>
+        <button id="btnSaveRecord" class="secondary" type="button">另存為版型設定</button>
+      </div>
+    </section>
+
+    <!-- STEP 7 -->
+    <section class="panel" data-locked="1" id="panel-7">
+      <h2><span class="idx">07</span>套版與格式檢查</h2>
+      <p class="hint">系統依上一步的設定，把每一列試算表資料套進海報 B，並自動檢查缺漏或超出範圍的內容。</p>
+      <div class="progressbar"><div id="progressFill2"></div></div>
+      <p class="mono small-note" id="genSummary"></p>
+      <ul class="warn-list" id="warnList"></ul>
+    </section>
+
+    <!-- STEP 8 -->
+    <section class="panel" data-locked="1" id="panel-8">
+      <h2><span class="idx">08</span>預覽成果</h2>
+      <p class="hint" id="previewHint">依試算表列數排出對應數量與欄位的成品，點圖可放大檢視。</p>
+      <div class="proof-grid" id="proofGrid"></div>
+    </section>
+
+    <!-- STEP 9 -->
+    <section class="panel" data-locked="1" id="panel-9">
+      <h2><span class="idx">09</span>輸出列印</h2>
+      <p class="hint">確認預覽無誤後，可下載整批 PDF 或直接開啟瀏覽器列印，紙張已設定為 A3。</p>
+      <div class="row">
+        <div class="field" style="max-width:220px;">
+          <label for="printOrientation">紙張方向</label>
+          <select id="printOrientation">
+            <option value="auto">自動（依海報比例判斷）</option>
+            <option value="portrait">直式</option>
+            <option value="landscape">橫式</option>
+          </select>
+        </div>
+      </div>
+      <div class="footer-actions">
+        <button id="btnPdf" class="press">下載 PDF</button>
+        <button id="btnPrint" class="secondary">開啟列印</button>
+      </div>
+      <p class="small-note">列印視窗開啟後，若需要調整印表機本身的設定（紙張來源、列印品質、色彩模式等），點選瀏覽器列印視窗裡的「更多設定」就可以進入該印表機的原生設定選項。</p>
+    </section>
+
+  </main>
+</div>
+
+<div class="modal" id="modal"><img id="modalImg" alt=""></div>
+
+<div class="modal" id="rowEditorModal">
+  <div class="row-editor-panel">
+    <h3 id="rowEditorTitle">編輯這張海報</h3>
+    <p class="hint">拖曳方框調整這一張的文字位置與大小，或直接修改下面的文字內容，只會影響這一張，不影響其他張。</p>
+    <div class="overlay-wrap" id="rowEditorCanvasWrap"></div>
+    <div id="rowEditorFields" style="margin-top:16px;"></div>
+    <div class="footer-actions">
+      <button id="btnRowEditorApply" class="press" type="button">套用變更</button>
+      <button id="btnRowEditorReset" class="secondary" type="button">重設為預設</button>
+      <button id="btnRowEditorClose" class="secondary" type="button">關閉</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- font catalogue (open-source, Traditional-Chinese-capable) ---------------- */
+  const FONT_OPTIONS = [
+    { id:'Noto Sans TC',       label:'思源黑體 Noto Sans TC',      stack:"'Noto Sans TC', sans-serif" },
+    { id:'Noto Sans TC Heavy', label:'思源黑體 TW Heavy',          stack:"'Noto Sans TC', sans-serif", weight:900 },
+    { id:'Noto Serif TC',      label:'思源宋體 Noto Serif TC',     stack:"'Noto Serif TC', serif" },
+    { id:'Noto Sans HK',       label:'思源黑體 HK',                stack:"'Noto Sans HK', sans-serif" },
+    { id:'Noto Serif HK',      label:'思源宋體 HK',                stack:"'Noto Serif HK', serif" },
+    { id:'LXGW WenKai TC',     label:'霞鶩文楷 LXGW WenKai TC',    stack:"'LXGW WenKai TC', serif" },
+    { id:'Iansui',             label:'芫荽 Iansui',                stack:"'Iansui', sans-serif" },
+    { id:'Chiron Hei HK',      label:'質感黑體 Chiron Hei HK',     stack:"'Chiron Hei HK', sans-serif" },
+    { id:'Century Gothic',     label:'Century Gothic（本機字型，找不到則替換為 Questrial）', stack:"'Century Gothic', 'Questrial', sans-serif" }
+  ];
+  const FONT_IDS = FONT_OPTIONS.map(f => f.id);
+
+  function fontOption(id){
+    return FONT_OPTIONS.find(o => o.id === id);
+  }
+
+  function fontStack(id){
+    const f = fontOption(id);
+    if(f) return f.stack;
+    const low = (id||'').toLowerCase();
+    if(/serif|明|宋/.test(low) && !/sans|黑/.test(low)) return "'Noto Serif TC', serif";
+    return "'Noto Sans TC', sans-serif";
+  }
+
+  /* ---------------- state ---------------- */
+  const state = {
+    provider: 'anthropic',
+    apiKey: '',
+    quickMode: false,
+    posterA: null,
+    posterB: null,
+    csv: { headers: [], rows: [] },
+    fields: [],
+    canvases: [],
+    rowOverrides: {},
+    warnings: []
+  };
+
+  const MODEL_IDS = {
+    anthropic: { standard: 'claude-sonnet-4-6', quick: 'claude-haiku-4-5-20251001' },
+    openai:    { standard: 'gpt-5.4',           quick: 'gpt-5.4-mini' },
+    gemini:    { standard: 'gemini-3.7-flash',  quick: 'gemini-3.5-flash-lite' }
+  };
+  function currentModel(){
+    return state.quickMode ? MODEL_IDS[state.provider].quick : MODEL_IDS[state.provider].standard;
+  }
+
+  const providerNotes = {
+    anthropic: '直接由瀏覽器呼叫 Anthropic API，金鑰只用在本機請求中。標準模式用 Claude Sonnet，加速模式用 Claude Haiku。',
+    openai: '直接由瀏覽器呼叫 OpenAI API；部分網路環境可能因跨網域限制而失敗。標準模式用 GPT-5.4，加速模式用 GPT-5.4 mini。',
+    gemini: '直接由瀏覽器呼叫 Google Gemini API；部分網路環境可能因跨網域限制而失敗。標準模式用 Gemini 3.7 Flash，加速模式用 Gemini 3.5 Flash-Lite。'
+  };
+
+  /* ---------------- helpers ---------------- */
+  const $ = (id) => document.getElementById(id);
+
+  function setStep(n, status){
+    const li = document.querySelector('#stepNav li[data-step="'+n+'"]');
+    if(!li) return;
+    li.classList.remove('active','done');
+    if(status) li.classList.add(status);
+    updateProgressLabel();
+  }
+  function updateProgressLabel(){
+    const doneCount = document.querySelectorAll('#stepNav li.done').length;
+    $('progressLabel').textContent = '進度　' + doneCount + ' / 9';
+  }
+  function unlock(n){
+    const p = $('panel-'+n);
+    if(p) p.removeAttribute('data-locked');
+  }
+  function scrollToPanel(n){
+    const p = $('panel-'+n);
+    if(p) p.scrollIntoView({behavior:'smooth', block:'start'});
+  }
+
+  document.querySelectorAll('#stepNav li').forEach(li => {
+    li.addEventListener('click', () => {
+      const n = li.getAttribute('data-step');
+      const panel = $('panel-'+n);
+      if(!panel || panel.hasAttribute('data-locked')){
+        panel.animate([{transform:'translateX(0)'},{transform:'translateX(-4px)'},{transform:'translateX(4px)'},{transform:'translateX(0)'}], {duration:220});
+        return;
+      }
+      scrollToPanel(n);
+    });
+  });
+
+  function addLog(msg, kind){
+    const box = $('logBox');
+    const line = document.createElement('div');
+    const t = new Date().toLocaleTimeString('zh-TW', {hour12:false});
+    const cls = kind === 'ok' ? 'l-ok' : kind === 'warn' ? 'l-warn' : kind === 'err' ? 'l-err' : '';
+    line.innerHTML = '<span class="t">'+t+'</span><span class="'+cls+'">'+msg+'</span>';
+    box.appendChild(line);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function setProgress(id, pct){
+    $(id).style.width = Math.max(0,Math.min(100,pct)) + '%';
+  }
+
+  function fileToImage(file){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => resolve({img, dataUrl: reader.result, mime: file.type || 'image/png'});
+        img.onerror = reject;
+        img.src = reader.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function base64FromDataUrl(dataUrl){
+    return dataUrl.split(',')[1];
+  }
+
+  /* Downscale before sending to the AI: cuts payload size and round-trip time
+     a lot for large print-resolution uploads, with no real loss for layout detection. */
+  function downscaleForAnalysis(img, maxDim){
+    const w = img.naturalWidth, h = img.naturalHeight;
+    const longEdge = Math.max(w,h);
+    if(longEdge <= maxDim){
+      return { base64: base64FromDataUrl(imgToDataUrl(img)), mime:'image/jpeg', w, h, scale:1 };
+    }
+    const scale = maxDim / longEdge;
+    const dw = Math.round(w*scale), dh = Math.round(h*scale);
+    const canvas = document.createElement('canvas');
+    canvas.width = dw; canvas.height = dh;
+    canvas.getContext('2d').drawImage(img, 0, 0, dw, dh);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+    return { base64: base64FromDataUrl(dataUrl), mime:'image/jpeg', w: dw, h: dh, scale };
+  }
+
+  function imgToDataUrl(img){
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+    canvas.getContext('2d').drawImage(img,0,0);
+    return canvas.toDataURL('image/jpeg', 0.9);
+  }
+
+  function parseCSV(text){
+    const rows = [];
+    let row = [], field = '', inQuotes = false;
+    for(let i=0;i<text.length;i++){
+      const c = text[i];
+      if(inQuotes){
+        if(c === '"'){
+          if(text[i+1] === '"'){ field += '"'; i++; } else { inQuotes = false; }
+        } else field += c;
+      } else {
+        if(c === '"') inQuotes = true;
+        else if(c === ','){ row.push(field); field=''; }
+        else if(c === '\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+        else if(c === '\r'){ /* skip */ }
+        else field += c;
+      }
+    }
+    if(field.length || row.length){ row.push(field); rows.push(row); }
+    return rows.filter(r => !(r.length===1 && r[0]===''));
+  }
+
+  function normalize(str){
+    return (str||'').toString().trim().toLowerCase().replace(/[\s_\-()（）：:]/g,'');
+  }
+
+  function guessMatch(fieldLabel, headers){
+    const nf = normalize(fieldLabel);
+    for(const h of headers){ if(normalize(h) === nf) return h; }
+    for(const h of headers){ const nh = normalize(h); if(nh && (nf.includes(nh) || nh.includes(nf))) return h; }
+    return '';
+  }
+
+  function isValidHex(c){ return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test((c||'').trim()); }
+
+  /* ---------------- saved layout records (max 10) ---------------- */
+  const RECORDS_KEY = 'poster_tool_records_v1';
+  const MAX_RECORDS = 10;
+
+  async function loadRecords(){
+    if(window.storage){
+      try{
+        const res = await window.storage.get(RECORDS_KEY, false);
+        if(res && res.value) return JSON.parse(res.value);
+      } catch(e){ /* key not found yet, fall through */ }
+    }
+    try{
+      const raw = localStorage.getItem(RECORDS_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch(e){ return []; }
+  }
+
+  async function persistRecords(records){
+    const json = JSON.stringify(records);
+    let ok = false;
+    if(window.storage){
+      try{ await window.storage.set(RECORDS_KEY, json, false); ok = true; } catch(e){ ok = false; }
+    }
+    if(!ok){
+      try{ localStorage.setItem(RECORDS_KEY, json); } catch(e){ alert('無法儲存紀錄：瀏覽器儲存空間被封鎖或已滿。'); }
+    }
+  }
+
+  function rgbToHex(r,g,b){
+    return '#' + [r,g,b].map(v => Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
+  }
+  function colorDist(a,b){
+    return Math.sqrt((a[0]-b[0])**2 + (a[1]-b[1])**2 + (a[2]-b[2])**2);
+  }
+
+  /* Estimate the real ink colour of a text block by comparing pixels inside the
+     bounding box against the background just outside it, instead of trusting
+     the model's guessed hex value. Returns null when there isn't enough contrast
+     to be confident (falls back to the AI's guess in that case). */
+  function sampleTextColor(img, x, y, w, h){
+    if(w <= 0 || h <= 0) return null;
+    const pad = Math.max(4, Math.round(Math.min(w,h) * 0.2));
+    const sx = Math.max(0, Math.round(x - pad)), sy = Math.max(0, Math.round(y - pad));
+    const ex = Math.min(img.naturalWidth, Math.round(x + w + pad));
+    const ey = Math.min(img.naturalHeight, Math.round(y + h + pad));
+    const cw = ex - sx, ch = ey - sy;
+    if(cw <= 0 || ch <= 0) return null;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = cw; canvas.height = ch;
+    const ctx = canvas.getContext('2d', {willReadFrequently:true});
+    ctx.drawImage(img, sx, sy, cw, ch, 0, 0, cw, ch);
+    let data;
+    try{ data = ctx.getImageData(0,0,cw,ch).data; } catch(e){ return null; }
+
+    const ix0 = Math.round(x - sx), iy0 = Math.round(y - sy);
+    const ix1 = ix0 + Math.round(w), iy1 = iy0 + Math.round(h);
+
+    let bgSum=[0,0,0], bgCount=0;
+    for(let yy=0; yy<ch; yy++){
+      for(let xx=0; xx<cw; xx++){
+        if(xx>=ix0 && xx<ix1 && yy>=iy0 && yy<iy1) continue;
+        const idx=(yy*cw+xx)*4;
+        bgSum[0]+=data[idx]; bgSum[1]+=data[idx+1]; bgSum[2]+=data[idx+2]; bgCount++;
+      }
+    }
+    if(bgCount < 8) return null;
+    const bg = [bgSum[0]/bgCount, bgSum[1]/bgCount, bgSum[2]/bgCount];
+
+    let sum=[0,0,0], count=0;
+    const threshold = 42;
+    for(let yy=Math.max(0,iy0); yy<Math.min(ch,iy1); yy++){
+      for(let xx=Math.max(0,ix0); xx<Math.min(cw,ix1); xx++){
+        const idx=(yy*cw+xx)*4;
+        const px=[data[idx],data[idx+1],data[idx+2]];
+        if(colorDist(px,bg) > threshold){ sum[0]+=px[0]; sum[1]+=px[1]; sum[2]+=px[2]; count++; }
+      }
+    }
+    const totalInside = Math.max(1, (ix1-ix0)*(iy1-iy0));
+    if(count < Math.max(6, totalInside*0.01)) return null;
+    return rgbToHex(sum[0]/count, sum[1]/count, sum[2]/count);
+  }
+
+  function escapeHtml(s){
+    return (s||'').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  /* ---------------- Step 1: AI settings ---------------- */
+  $('provider').addEventListener('change', e => {
+    state.provider = e.target.value;
+    $('providerNote').textContent = providerNotes[state.provider];
+  });
+  $('providerNote').textContent = providerNotes[state.provider];
+
+  $('apiKey').addEventListener('keydown', e => { if(e.key === 'Enter') $('btnSaveKey').click(); });
+  $('csvUrl').addEventListener('keydown', e => { if(e.key === 'Enter') $('btnLoadCsv').click(); });
+
+  $('btnSaveKey').addEventListener('click', () => {
+    const key = $('apiKey').value.trim();
+    if(!key){ alert('請輸入 API 金鑰。'); return; }
+    state.apiKey = key;
+    state.provider = $('provider').value;
+    state.quickMode = $('quickMode').checked;
+    setStep(1,'done'); setStep(2,'active');
+    unlock(2);
+    scrollToPanel(2);
+  });
+
+  /* ---------------- Step 2 & 3: uploads ---------------- */
+  function wireUpload(dropId, fileId, thumbId, nameId, onLoaded){
+    const drop = $(dropId), input = $(fileId);
+    drop.addEventListener('click', () => input.click());
+    drop.addEventListener('dragover', e => { e.preventDefault(); });
+    drop.addEventListener('drop', e => {
+      e.preventDefault();
+      if(e.dataTransfer.files && e.dataTransfer.files[0]){
+        input.files = e.dataTransfer.files;
+        input.dispatchEvent(new Event('change'));
+      }
+    });
+    input.addEventListener('change', async () => {
+      const file = input.files[0];
+      if(!file) return;
+      const {img, dataUrl, mime} = await fileToImage(file);
+      $(thumbId).src = dataUrl;
+      $(nameId).textContent = file.name + '　(' + img.naturalWidth + '×' + img.naturalHeight + 'px)';
+      onLoaded({img, dataUrl, mime, base64: base64FromDataUrl(dataUrl)});
+    });
+  }
+
+  wireUpload('dropA','fileA','thumbA','nameA', (data) => {
+    state.posterA = data;
+    $('btnToStep3').disabled = false;
+  });
+  wireUpload('dropB','fileB','thumbB','nameB', (data) => {
+    state.posterB = data;
+    $('btnToStep4').disabled = false;
+  });
+
+  $('btnToStep3').addEventListener('click', () => {
+    setStep(2,'done'); setStep(3,'active'); unlock(3); scrollToPanel(3);
+  });
+  $('btnToStep4').addEventListener('click', () => {
+    setStep(3,'done'); setStep(4,'active'); unlock(4); scrollToPanel(4);
+  });
+
+  /* ---------------- Step 4: Google Sheet CSV ---------------- */
+  $('btnLoadCsv').addEventListener('click', async () => {
+    const url = $('csvUrl').value.trim();
+    if(!url){ alert('請貼上已發布的 CSV 連結。'); return; }
+    $('btnLoadCsv').disabled = true;
+    $('btnLoadCsv').textContent = '讀取中…';
+    try{
+      const res = await fetch(url);
+      if(!res.ok) throw new Error('HTTP ' + res.status);
+      const text = await res.text();
+      const rows = parseCSV(text);
+      if(rows.length < 1) throw new Error('資料表是空的');
+      state.csv.headers = rows[0].map(h => h.trim());
+      state.csv.rows = rows.slice(1).filter(r => r.some(c => c && c.trim() !== ''));
+
+      $('csvSummary').textContent = '共讀到 ' + state.csv.headers.length + ' 個欄位、' + state.csv.rows.length + ' 筆資料。';
+      const table = $('csvPreviewTable');
+      let html = '<thead><tr>' + state.csv.headers.map(h => '<th>'+escapeHtml(h)+'</th>').join('') + '</tr></thead><tbody>';
+      state.csv.rows.slice(0,5).forEach(r => {
+        html += '<tr>' + state.csv.headers.map((h,i) => '<td>'+escapeHtml(r[i]||'')+'</td>').join('') + '</tr>';
+      });
+      html += '</tbody>';
+      table.innerHTML = html;
+      $('csvPreviewWrap').style.display = 'block';
+
+      setStep(4,'done'); setStep(5,'active'); unlock(5); scrollToPanel(5);
+    } catch(err){
+      alert('讀取資料表失敗：' + err.message + '\n請確認連結已「發布到網路」且格式為 CSV。');
+    } finally {
+      $('btnLoadCsv').disabled = false;
+      $('btnLoadCsv').textContent = '讀取資料表';
+    }
+  });
+
+  /* ---------------- Step 5: analyze poster A ---------------- */
+  $('btnAnalyze').addEventListener('click', runAnalysis);
+
+  let records = [];
+  async function refreshRecordsUI(){
+    records = await loadRecords();
+    $('recordCount').textContent = records.length;
+    const sel = $('recordSelect');
+    if(records.length === 0){
+      sel.innerHTML = '<option value="">— 尚無紀錄 —</option>';
+    } else {
+      sel.innerHTML = records.map(r =>
+        '<option value="'+r.id+'">'+escapeHtml(r.name)+'　('+r.fields.length+' 個欄位)</option>'
+      ).join('');
+    }
+  }
+  refreshRecordsUI();
+
+  $('btnApplyRecord').addEventListener('click', () => {
+    const id = $('recordSelect').value;
+    const rec = records.find(r => r.id === id);
+    if(!rec){ alert('請先選擇一筆紀錄。'); return; }
+    state.fields = JSON.parse(JSON.stringify(rec.fields)).map(f => Object.assign({
+      line_spacing: 1.3, letter_spacing_px: 0, stroke_color: '#ffffff', stroke_width_px: 0
+    }, f));
+    addLog('已套用版型設定「' + rec.name + '」，略過辨識步驟。', 'ok');
+    setStep(5,'done'); setStep(6,'active');
+    unlock(6);
+    buildMappingUI();
+    scrollToPanel(6);
+  });
+
+  $('btnDeleteRecord').addEventListener('click', async () => {
+    const id = $('recordSelect').value;
+    const rec = records.find(r => r.id === id);
+    if(!rec){ alert('請先選擇一筆紀錄。'); return; }
+    if(!confirm('確定要刪除版型設定「' + rec.name + '」嗎？')) return;
+    records = records.filter(r => r.id !== id);
+    await persistRecords(records);
+    await refreshRecordsUI();
+  });
+
+  $('btnSaveRecord').addEventListener('click', async () => {
+    records = await loadRecords();
+    if(records.length >= MAX_RECORDS){
+      alert('已達上限（10 筆），請先在上一步的「已儲存的版型」清單裡刪除一筆再存新的。');
+      return;
+    }
+    const name = prompt('幫這個版型設定取個名字：', '版型 ' + (records.length+1));
+    if(!name) return;
+    records.push({
+      id: 'r' + Date.now(),
+      name: name.trim(),
+      savedAt: new Date().toISOString(),
+      fields: JSON.parse(JSON.stringify(state.fields))
+    });
+    await persistRecords(records);
+    await refreshRecordsUI();
+    alert('已儲存版型設定「' + name.trim() + '」。');
+  });
+
+  function buildPrompt(w,h){
+    return '你是一位平面設計稿件分析師。請分析這張海報影像，找出每一個獨立的文字區塊（例如主標題、副標題、日期、地點、價格、聯絡資訊等）。\n' +
+    '針對每一個文字區塊，只回傳一個 JSON 陣列，不要加任何說明文字或 Markdown 標記，格式如下：\n' +
+    '[{"field_label":"文字用途，例如 主標題／活動日期／地點","sample_text":"影像中實際看到的文字",' +
+    '"font_family":"從這個清單挑選外觀最接近的一個："' + JSON.stringify(FONT_IDS) + '，若都不像可填 sans-serif 或 serif,' +
+    '"font_weight":"normal 或 bold","font_size_px":數字,' +
+    '"color":"文字本體顏色的 16 進位色碼，例如 #1a1a1a",' +
+    '"stroke_color":"文字邊框（描邊）顏色的 16 進位色碼，若肉眼看不出邊框請填 none",' +
+    '"stroke_width_px":"邊框粗細的像素估計值，若沒有邊框請填 0",' +
+    '"align":"left、center 或 right",' +
+    '"x":數字,"y":數字,"width":數字,"height":數字,"line_height":數字}]\n' +
+    '影像原始尺寸為 ' + w + ' x ' + h + ' 像素，所有座標與尺寸請以此為基準，單位為像素。';
+  }
+
+  function extractJsonArray(text){
+    let t = text.trim();
+    t = t.replace(/```json/gi,'').replace(/```/g,'').trim();
+    const start = t.indexOf('[');
+    const end = t.lastIndexOf(']');
+    if(start === -1 || end === -1) throw new Error('模型回覆中找不到 JSON 陣列');
+    return JSON.parse(t.slice(start, end+1));
+  }
+
+  function isRetryableError(status, message){
+    const m = (message||'').toLowerCase();
+    return status === 503 || status === 429 || status === 502 || status === 504 ||
+      m.includes('overloaded') || m.includes('high demand') || m.includes('try again later') || m.includes('rate limit');
+  }
+
+  async function callAI(prompt, base64, mime){
+    const maxAttempts = 4;
+    let lastErr;
+    for(let attempt = 1; attempt <= maxAttempts; attempt++){
+      try{
+        return await callAIOnce(prompt, base64, mime);
+      } catch(err){
+        lastErr = err;
+        const retryable = isRetryableError(err.status, err.message);
+        if(!retryable || attempt === maxAttempts) throw err;
+        const waitSec = attempt * 3;
+        addLog('模型目前忙碌中（' + err.message + '），' + waitSec + ' 秒後自動重試第 ' + (attempt+1) + ' 次…', 'warn');
+        await new Promise(res => setTimeout(res, waitSec * 1000));
+      }
+    }
+    throw lastErr;
+  }
+
+  async function callAIOnce(prompt, base64, mime){
+    if(state.provider === 'anthropic'){
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{
+          'content-type':'application/json',
+          'x-api-key': state.apiKey,
+          'anthropic-version':'2023-06-01',
+          'anthropic-dangerous-direct-browser-access':'true'
+        },
+        body: JSON.stringify({
+          model: currentModel(),
+          max_tokens:4096,
+          messages:[{role:'user', content:[
+            {type:'image', source:{type:'base64', media_type:mime, data:base64}},
+            {type:'text', text:prompt}
+          ]}]
+        })
+      });
+      const data = await res.json();
+      if(!res.ok){
+        const e = new Error(data.error && data.error.message || ('HTTP '+res.status));
+        e.status = res.status;
+        throw e;
+      }
+      const textBlock = (data.content||[]).find(b => b.type === 'text');
+      return textBlock ? textBlock.text : '';
+    }
+    if(state.provider === 'openai'){
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method:'POST',
+        headers:{'content-type':'application/json','authorization':'Bearer '+state.apiKey},
+        body: JSON.stringify({
+          model: currentModel(),
+          max_tokens:4096,
+          messages:[{role:'user', content:[
+            {type:'text', text:prompt},
+            {type:'image_url', image_url:{url:'data:'+mime+';base64,'+base64}}
+          ]}]
+        })
+      });
+      const data = await res.json();
+      if(!res.ok){
+        const e = new Error(data.error && data.error.message || ('HTTP '+res.status));
+        e.status = res.status;
+        throw e;
+      }
+      return data.choices[0].message.content;
+    }
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+currentModel()+':generateContent?key='+encodeURIComponent(state.apiKey), {
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body: JSON.stringify({
+        contents:[{parts:[{text:prompt},{inline_data:{mime_type:mime, data:base64}}]}]
+      })
+    });
+    const data = await res.json();
+    if(!res.ok){
+      const e = new Error((data.error && data.error.message) || ('HTTP '+res.status));
+      e.status = res.status;
+      throw e;
+    }
+    return data.candidates[0].content.parts[0].text;
+  }
+
+  async function runAnalysis(){
+    $('btnAnalyze').disabled = true;
+    $('logBox').innerHTML = '';
+    setProgress('progressFill', 0);
+    try{
+      addLog('讀取海報 A 影像…');
+      setProgress('progressFill', 8);
+      const fullW = state.posterA.img.naturalWidth, fullH = state.posterA.img.naturalHeight;
+
+      const quick = state.quickMode;
+      const maxDim = quick ? 1200 : 1600;
+      const ds = downscaleForAnalysis(state.posterA.img, maxDim);
+      if(ds.scale < 1){
+        addLog('已將影像縮小至 ' + ds.w + '×' + ds.h + 'px 以加快辨識速度…');
+      }
+      setProgress('progressFill', 18);
+
+      addLog('呼叫 AI 模型（' + currentModel() + '）辨識文字欄位…');
+      setProgress('progressFill', 30);
+      const prompt = buildPrompt(ds.w, ds.h);
+      const raw = await callAI(prompt, ds.base64, ds.mime);
+
+      addLog('解析辨識結果…');
+      setProgress('progressFill', 65);
+      let fields = extractJsonArray(raw);
+      const upscale = 1 / ds.scale; // map coordinates back to the full-resolution poster
+      fields = fields.map((f,i) => {
+        const fontSize = Math.round((Number(f.font_size_px) || 32) * upscale);
+        const rawLineHeight = Number(f.line_height) || 0;
+        const lineSpacing = rawLineHeight > 0 ? Math.min(3, Math.max(0.8, rawLineHeight / (Number(f.font_size_px)||32))) : 1.3;
+        return {
+          field_label: f.field_label || ('文字區塊 '+(i+1)),
+          sample_text: f.sample_text || '',
+          font_family: FONT_IDS.includes(f.font_family) ? f.font_family : (/serif|明|宋/i.test(f.font_family||'') ? 'Noto Serif TC' : 'Noto Sans TC'),
+          font_weight: /bold/i.test(f.font_weight) ? 'bold' : 'normal',
+          font_size_px: fontSize,
+          color: isValidHex(f.color) ? f.color : '#1a1a1a',
+          stroke_color: isValidHex(f.stroke_color) ? f.stroke_color : '#ffffff',
+          stroke_width_px: Math.round((Number(f.stroke_width_px) || 0) * upscale * 10) / 10,
+          align: ['left','center','right'].includes(f.align) ? f.align : 'left',
+          x: Math.round((Number(f.x)||0) * upscale),
+          y: Math.round((Number(f.y)||0) * upscale),
+          width: Math.round((Number(f.width)||200) * upscale),
+          height: Math.round((Number(f.height)||60) * upscale),
+          line_spacing: Math.round(lineSpacing*100)/100,
+          letter_spacing_px: 0
+        };
+      });
+      state.fields = fields;
+
+      let corrected = 0;
+      state.fields.forEach(f => {
+        const sampled = sampleTextColor(state.posterA.img, f.x, f.y, f.width, f.height);
+        if(sampled){ f.color = sampled; corrected++; }
+      });
+      if(corrected){
+        addLog('已用實際像素比對校正 ' + corrected + ' 個文字區塊的顏色。', 'ok');
+      }
+      addLog('辨識完成，共找到 ' + fields.length + ' 個文字區塊。', 'ok');
+      setProgress('progressFill', 100);
+
+      setStep(5,'done'); setStep(6,'active');
+      unlock(6);
+      buildMappingUI();
+      scrollToPanel(6);
+    } catch(err){
+      addLog('發生錯誤：' + err.message, 'err');
+      addLog('請確認 API 金鑰正確，若使用 OpenAI／Gemini，也可能是瀏覽器跨網域限制所致。', 'warn');
+    } finally {
+      $('btnAnalyze').disabled = false;
+    }
+  }
+
+  /* ---------------- Step 6: mapping + overlay ---------------- */
+  let overlayCanvas = null;
+  let overlayCtx = null;
+  let overlayNaturalW = 0, overlayNaturalH = 0;
+  const fieldInputs = []; // fieldInputs[i] = {x,y,width,height} <input> elements
+
+  const HANDLE_SIZE = 10; // in natural-image px, scaled for hit testing
+
+  function drawOverlay(){
+    if(!overlayCanvas){
+      overlayCanvas = document.createElement('canvas');
+      const img = state.posterA.img;
+      overlayCanvas.width = img.naturalWidth;
+      overlayCanvas.height = img.naturalHeight;
+      overlayNaturalW = img.naturalWidth;
+      overlayNaturalH = img.naturalHeight;
+      overlayCanvas.style.width = '560px';
+      overlayCanvas.style.cursor = 'default';
+      overlayCtx = overlayCanvas.getContext('2d');
+      $('overlayWrap').innerHTML = '';
+      $('overlayWrap').appendChild(overlayCanvas);
+      wireOverlayInteractions();
+    }
+    const ctx = overlayCtx;
+    ctx.clearRect(0,0,overlayCanvas.width, overlayCanvas.height);
+    ctx.drawImage(state.posterA.img,0,0);
+    const lw = Math.max(2, overlayNaturalW/500);
+    ctx.lineWidth = lw;
+    ctx.font = Math.round(overlayNaturalW/70) + 'px sans-serif';
+    state.fields.forEach((f, i) => {
+      const active = i === activeFieldIndex;
+      ctx.strokeStyle = active ? '#1C1D1B' : '#C1503C';
+      ctx.strokeRect(f.x, f.y, f.width, f.height);
+      ctx.fillStyle = active ? '#1C1D1B' : '#C1503C';
+      ctx.fillRect(f.x, Math.max(0,f.y-lw*10), lw*10*(String(i+1).length+1), lw*10);
+      ctx.fillStyle = '#fff';
+      ctx.fillText((i+1)+'', f.x+4, Math.max(0,f.y-lw*10)+lw*8);
+      // resize handle, bottom-right corner
+      const hs = lw*4;
+      ctx.fillStyle = active ? '#E3F24E' : '#C1503C';
+      ctx.fillRect(f.x+f.width-hs, f.y+f.height-hs, hs*2, hs*2);
+      ctx.strokeStyle = '#1C1D1B';
+      ctx.lineWidth = Math.max(1, lw*0.4);
+      ctx.strokeRect(f.x+f.width-hs, f.y+f.height-hs, hs*2, hs*2);
+      ctx.lineWidth = lw;
+    });
+  }
+
+  let activeFieldIndex = -1;
+
+  function canvasScale(){
+    return overlayCanvas.width / overlayCanvas.getBoundingClientRect().width;
+  }
+
+  function hitTest(px, py){
+    // px,py already in natural-image pixel space; iterate topmost (last-drawn) first
+    for(let i = state.fields.length - 1; i >= 0; i--){
+      const f = state.fields[i];
+      const lw = Math.max(2, overlayNaturalW/500);
+      const hs = lw*4;
+      const hx0 = f.x+f.width-hs, hy0 = f.y+f.height-hs;
+      if(px>=hx0-hs*0.5 && px<=hx0+hs*2.5 && py>=hy0-hs*0.5 && py<=hy0+hs*2.5){
+        return {index:i, mode:'resize'};
+      }
+      if(px>=f.x && px<=f.x+f.width && py>=f.y && py<=f.y+f.height){
+        return {index:i, mode:'move'};
+      }
+    }
+    return null;
+  }
+
+  function syncRowInputs(i){
+    const f = state.fields[i];
+    const inputs = fieldInputs[i];
+    if(!inputs) return;
+    inputs.x.value = f.x; inputs.y.value = f.y;
+    inputs.width.value = f.width; inputs.height.value = f.height;
+  }
+
+  function wireOverlayInteractions(){
+    let drag = null; // {index, mode, startPx, startPy, orig:{x,y,width,height}}
+    overlayCanvas.addEventListener('mousedown', e => {
+      const rect = overlayCanvas.getBoundingClientRect();
+      const scale = canvasScale();
+      const px = (e.clientX - rect.left) * scale;
+      const py = (e.clientY - rect.top) * scale;
+      const hit = hitTest(px, py);
+      if(!hit) return;
+      activeFieldIndex = hit.index;
+      const f = state.fields[hit.index];
+      drag = { index:hit.index, mode:hit.mode, startPx:px, startPy:py, orig:{x:f.x,y:f.y,width:f.width,height:f.height} };
+      drawOverlay();
+    });
+    window.addEventListener('mousemove', e => {
+      const rect = overlayCanvas.getBoundingClientRect();
+      const scale = canvasScale();
+      const px = (e.clientX - rect.left) * scale;
+      const py = (e.clientY - rect.top) * scale;
+      if(!drag){
+        const inBounds = px>=0 && py>=0 && px<=overlayCanvas.width && py<=overlayCanvas.height;
+        overlayCanvas.style.cursor = inBounds && hitTest(px,py) ? (hitTest(px,py).mode==='resize' ? 'nwse-resize' : 'move') : 'default';
+        return;
+      }
+      const f = state.fields[drag.index];
+      const dx = px - drag.startPx, dy = py - drag.startPy;
+      if(drag.mode === 'move'){
+        f.x = Math.round(drag.orig.x + dx);
+        f.y = Math.round(drag.orig.y + dy);
+      } else {
+        f.width = Math.max(10, Math.round(drag.orig.width + dx));
+        f.height = Math.max(10, Math.round(drag.orig.height + dy));
+      }
+      syncRowInputs(drag.index);
+      drawOverlay();
+    });
+    window.addEventListener('mouseup', () => { drag = null; });
+  }
+
+  function fontOptionsHtml(selected){
+    return FONT_OPTIONS.map(f =>
+      '<option value="'+f.id+'" style="font-family:'+f.stack+'"'+(f.id===selected?' selected':'')+'>'+f.label+'</option>'
+    ).join('');
+  }
+
+  function buildMappingUI(){
+    overlayCanvas = null;
+    overlayCtx = null;
+    activeFieldIndex = -1;
+    fieldInputs.length = 0;
+    drawOverlay();
+    const body = $('mapTableBody');
+    body.innerHTML = '';
+    const headers = state.csv.headers;
+    state.fields.forEach((f, i) => {
+      const tr = document.createElement('tr');
+      const autoMatch = guessMatch(f.field_label, headers) || guessMatch(f.sample_text, headers);
+      tr.innerHTML =
+        '<td><input type="text" data-k="field_label" value="'+escapeHtml(f.field_label)+'" style="width:110px"></td>' +
+        '<td><select data-k="map">' +
+          '<option value="">— 不套用 —</option>' +
+          headers.map(h => '<option value="'+escapeHtml(h)+'"'+(h===autoMatch?' selected':'')+'>'+escapeHtml(h)+'</option>').join('') +
+        '</select></td>' +
+        '<td><input type="number" data-k="x" value="'+f.x+'" style="width:60px"></td>' +
+        '<td><input type="number" data-k="y" value="'+f.y+'" style="width:60px"></td>' +
+        '<td><input type="number" data-k="width" value="'+f.width+'" style="width:60px"></td>' +
+        '<td><input type="number" data-k="height" value="'+f.height+'" style="width:60px"></td>' +
+        '<td><input type="number" data-k="font_size_px" value="'+f.font_size_px+'" style="width:54px"></td>' +
+        '<td><select data-k="font_family">'+fontOptionsHtml(f.font_family)+'</select></td>' +
+        '<td><select data-k="font_weight"'+(fontOption(f.font_family)&&fontOption(f.font_family).weight?' disabled':'')+'><option value="normal"'+(f.font_weight==='normal'?' selected':'')+'>normal</option><option value="bold"'+(f.font_weight==='bold'?' selected':'')+'>bold</option></select></td>' +
+        '<td><select data-k="align">' +
+          ['left','center','right'].map(a => '<option value="'+a+'"'+(f.align===a?' selected':'')+'>'+a+'</option>').join('') +
+        '</select></td>' +
+        '<td><input type="color" data-k="color" value="'+f.color+'"></td>' +
+        '<td><input type="color" data-k="stroke_color" value="'+f.stroke_color+'"></td>' +
+        '<td><input type="number" data-k="stroke_width_px" value="'+f.stroke_width_px+'" style="width:50px" min="0" step="0.5"></td>' +
+        '<td><input type="number" data-k="letter_spacing_px" value="'+f.letter_spacing_px+'" style="width:50px" step="0.5"></td>' +
+        '<td><input type="number" data-k="line_spacing" value="'+f.line_spacing+'" style="width:54px" min="0.8" max="3" step="0.05"></td>';
+      tr.querySelectorAll('[data-k]').forEach(el => {
+        el.addEventListener('input', () => {
+          const k = el.getAttribute('data-k');
+          if(k === 'map'){ f.mapTo = el.value; return; }
+          if(['x','y','width','height','font_size_px','stroke_width_px','letter_spacing_px','line_spacing'].includes(k)) f[k] = Number(el.value)||0;
+          else f[k] = el.value;
+          if(k === 'font_family'){
+            const weightSelect = tr.querySelector('[data-k="font_weight"]');
+            weightSelect.disabled = !!(fontOption(el.value) && fontOption(el.value).weight);
+          }
+          if(['x','y','width','height'].includes(k)) drawOverlay();
+        });
+        el.addEventListener('change', () => el.dispatchEvent(new Event('input')));
+      });
+      tr.addEventListener('focusin', () => { activeFieldIndex = i; drawOverlay(); });
+      f.mapTo = autoMatch;
+      fieldInputs[i] = {
+        x: tr.querySelector('[data-k="x"]'),
+        y: tr.querySelector('[data-k="y"]'),
+        width: tr.querySelector('[data-k="width"]'),
+        height: tr.querySelector('[data-k="height"]')
+      };
+      body.appendChild(tr);
+    });
+  }
+
+  $('btnConfirmMap').addEventListener('click', () => {
+    setStep(6,'done'); setStep(7,'active'); unlock(7);
+    scrollToPanel(7);
+    generatePosters();
+  });
+
+  /* ---------------- Step 7: generate + validate ---------------- */
+  function measureChar(ctx, ch, letterSpacing){
+    return ctx.measureText(ch).width + letterSpacing;
+  }
+
+  function wrapTextTracked(ctx, text, maxWidth, letterSpacing){
+    const lines = [];
+    const paragraphs = String(text).split('\n');
+    paragraphs.forEach(p => {
+      let line = '', lineWidth = 0;
+      for(const ch of p){
+        const chW = measureChar(ctx, ch, letterSpacing);
+        if(lineWidth + chW > maxWidth && line.length > 0){
+          lines.push(line);
+          line = ch; lineWidth = chW;
+        } else {
+          line += ch; lineWidth += chW;
+        }
+      }
+      lines.push(line);
+    });
+    return lines;
+  }
+
+  function lineWidthTracked(ctx, line, letterSpacing){
+    let w = 0;
+    for(const ch of line) w += measureChar(ctx, ch, letterSpacing);
+    return Math.max(0, w - letterSpacing); // no trailing gap after the last glyph
+  }
+
+  function drawTrackedLine(ctx, line, startX, y, letterSpacing, hasStroke){
+    let x = startX;
+    for(const ch of line){
+      if(hasStroke) ctx.strokeText(ch, x, y);
+      ctx.fillText(ch, x, y);
+      x += measureChar(ctx, ch, letterSpacing);
+    }
+  }
+
+  function fitAndDraw(ctx, text, f){
+    let size = f.font_size_px;
+    const minSize = Math.max(8, Math.round(f.font_size_px*0.55));
+    const spacing = f.letter_spacing_px || 0;
+    const lineSpacing = f.line_spacing || 1.3;
+    let lines, lineHeight;
+    while(size >= minSize){
+      const opt = fontOption(f.font_family);
+      const weight = opt && opt.weight ? String(opt.weight) : (f.font_weight === 'bold' ? '700' : '400');
+      ctx.font = weight + ' ' + size + 'px ' + fontStack(f.font_family);
+      lineHeight = Math.round(size * lineSpacing);
+      lines = wrapTextTracked(ctx, text, f.width, spacing);
+      if(lines.length * lineHeight <= f.height || size <= minSize) break;
+      size -= 1;
+    }
+    const overflow = lines.length * lineHeight > f.height;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    const hasStroke = f.stroke_width_px > 0;
+    if(hasStroke){
+      ctx.lineJoin = 'round';
+      ctx.miterLimit = 2;
+      ctx.lineWidth = f.stroke_width_px * 2; // stroke straddles the path centreline
+      ctx.strokeStyle = isValidHex(f.stroke_color) ? f.stroke_color : '#ffffff';
+    }
+    ctx.fillStyle = isValidHex(f.color) ? f.color : '#1a1a1a';
+    lines.forEach((line, i) => {
+      const lw = lineWidthTracked(ctx, line, spacing);
+      const startX = f.align === 'left' ? f.x : f.align === 'right' ? f.x + f.width - lw : f.x + f.width/2 - lw/2;
+      const ly = f.y + i*lineHeight;
+      drawTrackedLine(ctx, line, startX, ly, spacing, hasStroke);
+    });
+    return {overflow, finalSize: size};
+  }
+
+  function usableFieldList(){
+    return state.fields.filter(f => f.mapTo);
+  }
+
+  /* Builds (or rebuilds) the canvas for one CSV row, applying any per-row
+     overrides (position/size or text) saved for that row. Reused both for
+     the initial batch generation and after an individual poster is edited. */
+  function composePoster(rowIndex){
+    const usableFields = usableFieldList();
+    const row = state.csv.rows[rowIndex];
+    const overrides = state.rowOverrides[rowIndex] || {};
+
+    const canvas = document.createElement('canvas');
+    canvas.width = state.posterB.img.naturalWidth;
+    canvas.height = state.posterB.img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(state.posterB.img, 0, 0);
+
+    const rowWarnings = [];
+    let anyOverflow = false;
+
+    usableFields.forEach((f, fi) => {
+      const colIndex = state.csv.headers.indexOf(f.mapTo);
+      const csvValue = colIndex >= 0 ? (row[colIndex]||'').trim() : '';
+      const ov = overrides[fi] || {};
+      const value = ov.text !== undefined ? ov.text.trim() : csvValue;
+      if(!value){
+        rowWarnings.push('「' + f.mapTo + '」欄位是空的（對應「' + f.field_label + '」）。');
+        return;
+      }
+      const effective = Object.assign({}, f, ov.geom || {});
+      const result = fitAndDraw(ctx, value, effective);
+      if(result.overflow){
+        anyOverflow = true;
+        rowWarnings.push('「' + f.field_label + '」文字過長，已縮小至 ' + result.finalSize + 'px 仍可能超出範圍。');
+      }
+    });
+
+    return { canvas, rowWarnings, anyOverflow };
+  }
+
+  async function generatePosters(){
+    setProgress('progressFill2', 0);
+    $('warnList').innerHTML = '';
+    state.canvases = [];
+    state.warnings = [];
+    state.rowOverrides = {};
+
+    const usableFields = usableFieldList();
+    if(usableFields.length === 0){
+      $('genSummary').textContent = '沒有任何文字區塊對應到資料表欄位，請回到上一步設定對應關係。';
+      return;
+    }
+
+    // make sure all chosen webfonts are actually loaded before measuring/drawing
+    const usedFonts = Array.from(new Set(usableFields.map(f => f.font_family)));
+    await Promise.all(usedFonts.map(id => {
+      const stack = fontStack(id);
+      const opt = fontOption(id);
+      const weights = opt && opt.weight ? [opt.weight] : [400, 700];
+      return Promise.all(weights.map(w => document.fonts.load(w + ' 40px ' + stack))).catch(()=>{});
+    }));
+
+    const rows = state.csv.rows;
+    for(let r=0; r<rows.length; r++){
+      const { canvas, rowWarnings, anyOverflow } = composePoster(r);
+      rowWarnings.forEach(w => state.warnings.push('第 ' + (r+2) + ' 列：' + w));
+      state.canvases.push({ canvas, label: rows[r][0] || ('第 '+(r+2)+' 列'), rowIndex:r, hasOverflow:anyOverflow });
+      setProgress('progressFill2', Math.round(((r+1)/rows.length)*100));
+      await new Promise(res => setTimeout(res, 0));
+    }
+
+    $('genSummary').textContent = '已產出 ' + state.canvases.length + ' 張海報，套用欄位 ' + usableFields.length + ' 個。';
+    if(state.warnings.length){
+      const ul = $('warnList');
+      state.warnings.forEach(w => {
+        const li = document.createElement('li');
+        li.innerHTML = '<b>注意　</b>' + escapeHtml(w);
+        ul.appendChild(li);
+      });
+    } else {
+      const li = document.createElement('li');
+      li.textContent = '格式檢查完成，沒有發現問題。';
+      $('warnList').appendChild(li);
+    }
+
+    setStep(7,'done'); setStep(8,'active');
+    unlock(8);
+    buildPreview();
+    unlock(9);
+    setStep(9,'active');
+  }
+
+  /* ---------------- Step 8: preview ---------------- */
+  function buildPreview(){
+    const grid = $('proofGrid');
+    grid.innerHTML = '';
+    $('previewHint').textContent = '共 ' + state.canvases.length + ' 張，欄位 ' + state.fields.filter(f=>f.mapTo).length + ' 個，點圖可放大檢視，也可以個別編輯文字位置與內容。';
+    state.canvases.forEach((item, i) => grid.appendChild(makeProofCard(i)));
+  }
+
+  function makeProofCard(i){
+    const item = state.canvases[i];
+    const card = document.createElement('div');
+    card.className = 'proof-card';
+    card.id = 'proofCard' + i;
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.textContent = '№ ' + (i+1);
+    const img = document.createElement('img');
+    img.src = item.canvas.toDataURL('image/jpeg', 0.85);
+    img.addEventListener('click', () => {
+      $('modalImg').src = item.canvas.toDataURL('image/png');
+      $('modal').classList.add('show');
+    });
+    const cap = document.createElement('div');
+    cap.className = 'cap';
+    cap.textContent = item.label;
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = 'secondary card-edit-btn';
+    editBtn.textContent = '編輯這張';
+    editBtn.addEventListener('click', () => openRowEditor(i));
+    card.appendChild(chip);
+    card.appendChild(img);
+    card.appendChild(cap);
+    if(item.hasOverflow){
+      const badge = document.createElement('span');
+      badge.className = 'badge warn overflow-badge';
+      badge.textContent = '文字可能超框';
+      card.appendChild(badge);
+    }
+    card.appendChild(editBtn);
+    return card;
+  }
+
+  function refreshProofCard(i){
+    const old = document.getElementById('proofCard'+i);
+    const fresh = makeProofCard(i);
+    if(old) old.replaceWith(fresh);
+  }
+
+  /* ---------------- per-row editor: adjust one poster's text position / content ---------------- */
+  let rowEditorState = null;
+
+  function openRowEditor(rowIndex){
+    const usableFields = usableFieldList();
+    const existing = state.rowOverrides[rowIndex] || {};
+    const row = state.csv.rows[rowIndex];
+
+    const workingFields = usableFields.map((f, fi) => {
+      const ov = existing[fi] || {};
+      return Object.assign({}, f, ov.geom || {});
+    });
+    const textValues = usableFields.map((f, fi) => {
+      const ov = existing[fi] || {};
+      if(ov.text !== undefined) return ov.text;
+      const colIndex = state.csv.headers.indexOf(f.mapTo);
+      return colIndex >= 0 ? (row[colIndex]||'') : '';
+    });
+
+    $('rowEditorTitle').textContent = '編輯這張海報　·　' + state.canvases[rowIndex].label;
+
+    const wrap = $('rowEditorCanvasWrap');
+    wrap.innerHTML = '';
+    const canvas = document.createElement('canvas');
+    canvas.width = state.posterB.img.naturalWidth;
+    canvas.height = state.posterB.img.naturalHeight;
+    canvas.style.width = '100%';
+    canvas.style.maxWidth = '560px';
+    const ctx = canvas.getContext('2d');
+    wrap.appendChild(canvas);
+
+    let activeIdx = -1;
+    let drag = null;
+
+    function redraw(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(state.posterB.img,0,0);
+      workingFields.forEach((f, fi) => {
+        const val = (textValues[fi]||'').trim();
+        if(val) fitAndDraw(ctx, val, f);
+      });
+      const lw = Math.max(2, canvas.width/500);
+      workingFields.forEach((f, fi) => {
+        ctx.lineWidth = lw;
+        ctx.strokeStyle = fi === activeIdx ? '#1C1D1B' : '#E3F24E';
+        ctx.strokeRect(f.x, f.y, f.width, f.height);
+        const hs = lw*4;
+        ctx.fillStyle = fi === activeIdx ? '#1C1D1B' : '#E3F24E';
+        ctx.fillRect(f.x+f.width-hs, f.y+f.height-hs, hs*2, hs*2);
+      });
+    }
+
+    function scale(){ return canvas.width / canvas.getBoundingClientRect().width; }
+    function hit(px,py){
+      for(let i=workingFields.length-1; i>=0; i--){
+        const f = workingFields[i];
+        const lw = Math.max(2, canvas.width/500), hs = lw*4;
+        const hx = f.x+f.width-hs, hy = f.y+f.height-hs;
+        if(px>=hx-hs*0.5 && px<=hx+hs*2.5 && py>=hy-hs*0.5 && py<=hy+hs*2.5) return {i, mode:'resize'};
+        if(px>=f.x && px<=f.x+f.width && py>=f.y && py<=f.y+f.height) return {i, mode:'move'};
+      }
+      return null;
+    }
+    function onDown(e){
+      const rect = canvas.getBoundingClientRect(); const s = scale();
+      const px=(e.clientX-rect.left)*s, py=(e.clientY-rect.top)*s;
+      const h = hit(px,py);
+      if(!h) return;
+      activeIdx = h.i;
+      const f = workingFields[h.i];
+      drag = {i:h.i, mode:h.mode, startPx:px, startPy:py, orig:{x:f.x,y:f.y,width:f.width,height:f.height}};
+      redraw();
+    }
+    function onMove(e){
+      if(!drag) return;
+      const rect = canvas.getBoundingClientRect(); const s = scale();
+      const px=(e.clientX-rect.left)*s, py=(e.clientY-rect.top)*s;
+      const f = workingFields[drag.i];
+      const dx = px-drag.startPx, dy = py-drag.startPy;
+      if(drag.mode === 'move'){
+        f.x = Math.round(drag.orig.x+dx);
+        f.y = Math.round(drag.orig.y+dy);
+      } else {
+        f.width = Math.max(10, Math.round(drag.orig.width+dx));
+        f.height = Math.max(10, Math.round(drag.orig.height+dy));
+      }
+      redraw();
+    }
+    function onUp(){ drag = null; }
+    canvas.addEventListener('mousedown', onDown);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+
+    redraw();
+
+    const fieldsBox = $('rowEditorFields');
+    fieldsBox.innerHTML = '';
+    usableFields.forEach((f, fi) => {
+      const div = document.createElement('div');
+      div.className = 'row-editor-field';
+      div.innerHTML = '<label>'+escapeHtml(f.field_label)+'（對應「'+escapeHtml(f.mapTo)+'」）</label>' +
+        '<textarea data-fi="'+fi+'">'+escapeHtml(textValues[fi])+'</textarea>';
+      const ta = div.querySelector('textarea');
+      ta.addEventListener('focus', () => { activeIdx = fi; redraw(); });
+      ta.addEventListener('input', () => { textValues[fi] = ta.value; redraw(); });
+      fieldsBox.appendChild(div);
+    });
+
+    rowEditorState = {
+      rowIndex, usableFields, workingFields, textValues,
+      cleanup(){
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      }
+    };
+
+    $('rowEditorModal').classList.add('show');
+  }
+
+  function closeRowEditor(){
+    if(rowEditorState) rowEditorState.cleanup();
+    rowEditorState = null;
+    $('rowEditorModal').classList.remove('show');
+  }
+
+  $('btnRowEditorClose').addEventListener('click', closeRowEditor);
+  $('rowEditorModal').addEventListener('click', e => {
+    if(e.target.id === 'rowEditorModal') closeRowEditor();
+  });
+
+  $('btnRowEditorApply').addEventListener('click', () => {
+    if(!rowEditorState) return;
+    const { rowIndex, usableFields, workingFields, textValues } = rowEditorState;
+    const overrides = {};
+    usableFields.forEach((f, fi) => {
+      const wf = workingFields[fi];
+      const geomChanged = f.x!==wf.x || f.y!==wf.y || f.width!==wf.width || f.height!==wf.height;
+      const colIndex = state.csv.headers.indexOf(f.mapTo);
+      const originalText = colIndex >= 0 ? (state.csv.rows[rowIndex][colIndex]||'') : '';
+      const textChanged = textValues[fi] !== originalText;
+      if(geomChanged || textChanged){
+        overrides[fi] = {};
+        if(geomChanged) overrides[fi].geom = {x:wf.x, y:wf.y, width:wf.width, height:wf.height};
+        if(textChanged) overrides[fi].text = textValues[fi];
+      }
+    });
+    state.rowOverrides[rowIndex] = overrides;
+    const { canvas, anyOverflow } = composePoster(rowIndex);
+    state.canvases[rowIndex].canvas = canvas;
+    state.canvases[rowIndex].hasOverflow = anyOverflow;
+    refreshProofCard(rowIndex);
+    closeRowEditor();
+  });
+
+  $('btnRowEditorReset').addEventListener('click', () => {
+    if(!rowEditorState) return;
+    const rowIndex = rowEditorState.rowIndex;
+    delete state.rowOverrides[rowIndex];
+    const { canvas, anyOverflow } = composePoster(rowIndex);
+    state.canvases[rowIndex].canvas = canvas;
+    state.canvases[rowIndex].hasOverflow = anyOverflow;
+    refreshProofCard(rowIndex);
+    closeRowEditor();
+  });
+
+
+  $('modal').addEventListener('click', () => $('modal').classList.remove('show'));
+
+  /* ---------------- Step 9: output ---------------- */
+  function resolveOrientation(){
+    const choice = $('printOrientation').value;
+    if(choice === 'portrait' || choice === 'landscape') return choice;
+    const first = state.canvases[0].canvas;
+    return first.width >= first.height ? 'landscape' : 'portrait';
+  }
+
+  $('btnPdf').addEventListener('click', () => {
+    if(!state.canvases.length){ alert('尚未產出任何海報。'); return; }
+    const { jsPDF } = window.jspdf;
+    const orientation = resolveOrientation();
+    const doc = new jsPDF({ unit:'mm', format:'a3', orientation });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    state.canvases.forEach((item, i) => {
+      if(i>0) doc.addPage('a3', orientation);
+      doc.addImage(item.canvas.toDataURL('image/jpeg',0.92), 'JPEG', 0, 0, pageW, pageH);
+    });
+    doc.save('poster-batch.pdf');
+  });
+
+  $('btnPrint').addEventListener('click', () => {
+    if(!state.canvases.length){ alert('尚未產出任何海報。'); return; }
+    const orientation = resolveOrientation();
+    const w = window.open('', '_blank');
+    const imgs = state.canvases.map(item => '<img src="'+item.canvas.toDataURL('image/png')+'">').join('');
+    w.document.write(
+      '<html><head><title>列印</title><style>' +
+      '@page{ size:A3 ' + orientation + '; margin:0; } body{ margin:0; }' +
+      'img{ width:100%; display:block; page-break-after:always; }' +
+      '</style></head><body>' + imgs + '</body></html>'
+    );
+    w.document.close();
+    w.onload = () => w.print();
+  });
+
+  /* init */
+  setStep(1,'active');
+})();
+</script>
+</body>
+</html>
