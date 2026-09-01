@@ -6,31 +6,37 @@
 <title>套版工坊 — 海報自動排版產出</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+HK:wght@400;700&family=Noto+Serif+HK:wght@400;700&family=LXGW+WenKai+TC&family=Iansui&family=Chiron+Hei+HK&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
-    --paper:#F0EEE7;
-    --paper-raised:#FAF9F5;
-    --ink:#1A1D22;
-    --ink-soft:#5B5C57;
-    --line:#D3CFC2;
-    --line-strong:#B7B1A0;
-    --press:#B23A2E;
-    --press-soft:#EFD9D3;
-    --proof:#2E6B73;
-    --proof-soft:#D9E6E5;
+    /* sage-dashboard palette */
+    --paper:#AEB6A0;
+    --card:#FFFFFF;
+    --card-dark:#191A18;
+    --card-dark-text:#F4F5EF;
+    --card-soft:#E9E8E1;
+    --ink:#1C1D1B;
+    --ink-soft:#6C7266;
+    --line:#E1DFD6;
+    --line-strong:#C9C7BC;
+    --accent:#E3F24E;
+    --accent-ink:#1C1D1B;
     --warn:#B4791F;
     --warn-soft:#F1E3C8;
-    --radius:2px;
+    --err:#C1503C;
+    --err-soft:#F3DAD3;
+    --ok:#4C8C5B;
+    --ok-soft:#DCEBDD;
+    --radius-lg:22px;
+    --radius-md:14px;
+    --radius-pill:999px;
+    --shadow-card:0 1px 2px rgba(20,20,15,.04), 0 10px 28px rgba(20,20,15,.08);
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
     background:var(--paper);
-    background-image:
-      radial-gradient(var(--line-strong) .6px, transparent .6px);
-    background-size:16px 16px;
     color:var(--ink);
     font-family:'Space Grotesk', sans-serif;
     -webkit-font-smoothing:antialiased;
@@ -41,17 +47,22 @@
   /* ---------- shell ---------- */
   .shell{
     display:grid;
-    grid-template-columns:260px 1fr;
+    grid-template-columns:264px 1fr;
     min-height:100vh;
+    gap:20px;
+    padding:20px;
   }
   .rail{
-    border-right:1px solid var(--line);
-    padding:32px 22px;
+    background:var(--card-dark);
+    color:var(--card-dark-text);
+    border-radius:var(--radius-lg);
+    padding:30px 22px;
     position:sticky;
-    top:0;
+    top:20px;
     align-self:start;
-    height:100vh;
+    height:calc(100vh - 40px);
     overflow-y:auto;
+    box-shadow:var(--shadow-card);
   }
   .brand{
     font-weight:700;
@@ -61,61 +72,65 @@
   }
   .brand-sub{
     font-size:12.5px;
-    color:var(--ink-soft);
-    margin:0 0 28px;
-    line-height:1.5;
+    color:#B9BBB2;
+    margin:0 0 26px;
+    line-height:1.55;
   }
   .steps{list-style:none;margin:0;padding:0;}
   .steps li{
     display:flex;
     gap:12px;
-    padding:10px 0;
-    border-top:1px solid var(--line);
+    align-items:center;
+    padding:9px 10px;
+    margin-bottom:4px;
+    border-radius:var(--radius-pill);
     cursor:pointer;
-    opacity:.45;
+    opacity:.55;
   }
-  .steps li:first-child{border-top:none;}
-  .steps li.active{opacity:1;}
-  .steps li.done{opacity:.85;}
+  .steps li.active{opacity:1; background:var(--accent); color:var(--accent-ink);}
+  .steps li.done{opacity:.9;}
   .steps li .num{
     font-family:'IBM Plex Mono', monospace;
-    font-size:12px;
+    font-size:11.5px;
     width:20px;height:20px;
-    border:1px solid var(--ink);
+    border:1px solid #6B6E67;
     border-radius:50%;
     display:flex;align-items:center;justify-content:center;
     flex-shrink:0;
   }
-  .steps li.done .num{background:var(--ink);color:var(--paper-raised);}
-  .steps li.active .num{background:var(--press);border-color:var(--press);color:#fff;}
-  .steps li .label{font-size:13.5px; padding-top:1px;}
+  .steps li.active .num{background:var(--accent-ink);border-color:var(--accent-ink);color:var(--accent);}
+  .steps li.done .num{background:#3A3C37;border-color:#3A3C37;color:#F4F5EF;}
+  .steps li .label{font-size:13px; padding-top:1px;}
 
-  .main{padding:40px 48px 120px; max-width:980px;}
+  .main{padding:0 4px 60px; max-width:1000px;}
   .panel{
-    background:var(--paper-raised);
-    border:1px solid var(--line);
+    background:var(--card);
+    border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-card);
     padding:28px 30px;
-    margin-bottom:22px;
+    margin-bottom:20px;
   }
   .panel[data-locked="1"]{
     opacity:.4;
     pointer-events:none;
   }
   .panel h2{
-    font-size:15px;
-    text-transform:none;
+    font-size:16px;
     margin:0 0 4px;
     display:flex;
     align-items:baseline;
     gap:10px;
   }
-  .panel h2 .idx{color:var(--press); font-family:'IBM Plex Mono',monospace; font-size:13px;}
+  .panel h2 .idx{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--accent-ink);
+    background:var(--accent); border-radius:var(--radius-pill); padding:2px 9px;
+  }
   .panel .hint{
     font-size:13px;
     color:var(--ink-soft);
     margin:0 0 18px;
     line-height:1.6;
-    max-width:62ch;
+    max-width:64ch;
   }
 
   label{display:block; font-size:12.5px; color:var(--ink-soft); margin-bottom:6px;}
@@ -123,14 +138,15 @@
     width:100%;
     font-family:'IBM Plex Mono', monospace;
     font-size:13px;
-    padding:9px 10px;
+    padding:10px 12px;
     border:1px solid var(--line-strong);
-    background:#fff;
+    background:var(--card-soft);
     color:var(--ink);
-    border-radius:var(--radius);
+    border-radius:var(--radius-md);
   }
+  input[type=color]{padding:3px; height:38px; cursor:pointer;}
   input:focus, select:focus, textarea:focus{
-    outline:2px solid var(--proof);
+    outline:2px solid var(--ink);
     outline-offset:1px;
   }
   .row{display:flex; gap:16px; flex-wrap:wrap;}
@@ -140,30 +156,32 @@
     font-family:'Space Grotesk', sans-serif;
     font-weight:600;
     font-size:13.5px;
-    padding:11px 20px;
+    padding:12px 22px;
     border:1px solid var(--ink);
     background:var(--ink);
-    color:var(--paper-raised);
+    color:var(--card);
     cursor:pointer;
-    border-radius:var(--radius);
+    border-radius:var(--radius-pill);
   }
-  button.secondary{background:transparent; color:var(--ink);}
-  button.press{background:var(--press); border-color:var(--press); color:#fff;}
+  button.secondary{background:transparent; color:var(--ink); border-color:var(--line-strong);}
+  button.press{background:var(--accent); border-color:var(--accent); color:var(--accent-ink);}
   button:disabled{opacity:.35; cursor:not-allowed;}
-  button:hover:not(:disabled){filter:brightness(1.08);}
+  button:hover:not(:disabled){filter:brightness(1.05);}
 
   .upload-box{
     border:1.5px dashed var(--line-strong);
+    border-radius:var(--radius-md);
     padding:18px;
     display:flex;
     gap:16px;
     align-items:center;
     cursor:pointer;
-    background:#fff;
+    background:var(--card-soft);
   }
-  .upload-box:hover{border-color:var(--proof);}
+  .upload-box:hover{border-color:var(--ink);}
   .upload-box .thumb{
     width:88px;height:118px;
+    border-radius:8px;
     border:1px solid var(--line);
     background:repeating-linear-gradient(45deg,#eee,#eee 6px,#f7f7f5 6px,#f7f7f5 12px);
     object-fit:cover;
@@ -175,46 +193,51 @@
   .log{
     font-family:'IBM Plex Mono', monospace;
     font-size:12.5px;
-    background:var(--ink);
-    color:#DCEFEF;
+    background:var(--card-dark);
+    color:var(--card-dark-text);
     padding:16px 18px;
+    border-radius:var(--radius-md);
     max-height:220px;
     overflow-y:auto;
     line-height:1.9;
-    border-radius:var(--radius);
   }
-  .log .l-ok{color:#8FE0B0;}
+  .log .l-ok{color:#B7EBA0;}
   .log .l-warn{color:#F2C879;}
-  .log .l-err{color:#F29A8B;}
-  .log .t{color:#8A8F94; margin-right:8px;}
+  .log .l-err{color:#F2A38F;}
+  .log .t{color:#8A8F84; margin-right:8px;}
 
   .progressbar{
-    height:6px; background:var(--line); overflow:hidden; margin:14px 0 4px; border-radius:3px;
+    height:7px; background:var(--card-soft); overflow:hidden; margin:14px 0 4px; border-radius:var(--radius-pill);
   }
-  .progressbar > div{height:100%; width:0%; background:var(--press); transition:width .3s ease;}
+  .progressbar > div{height:100%; width:0%; background:var(--accent); transition:width .3s ease;}
 
   table.map-table{width:100%; border-collapse:collapse; font-size:12.5px;}
   table.map-table th{
     text-align:left; font-weight:600; color:var(--ink-soft);
-    font-size:11.5px; padding:6px 8px; border-bottom:1px solid var(--line-strong);
+    font-size:11px; padding:8px; border-bottom:1px solid var(--line-strong);
+    white-space:nowrap;
   }
-  table.map-table td{padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:middle;}
-  table.map-table input, table.map-table select{padding:5px 6px; font-size:12px;}
-  table.map-table input[type=color]{padding:2px; height:30px;}
+  table.map-table td{padding:7px 8px; border-bottom:1px solid var(--line); vertical-align:middle;}
+  table.map-table input, table.map-table select{padding:6px 7px; font-size:12px; border-radius:8px;}
+  table.map-table input[type=color]{padding:2px; height:30px; border-radius:8px;}
+  table.map-table input[type=number]{width:58px;}
 
   .badge{
     display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:10.5px;
-    padding:2px 7px; border-radius:10px; border:1px solid currentColor;
+    padding:3px 9px; border-radius:var(--radius-pill); border:1px solid currentColor;
   }
-  .badge.ok{color:var(--proof); background:var(--proof-soft);}
-  .badge.warn{color:var(--warn); background:var(--warn-soft);}
-  .badge.err{color:var(--press); background:var(--press-soft);}
+  .badge.ok{color:var(--ok); background:var(--ok-soft); border-color:transparent;}
+  .badge.warn{color:var(--warn); background:var(--warn-soft); border-color:transparent;}
+  .badge.err{color:var(--err); background:var(--err-soft); border-color:transparent;}
 
-  .overlay-wrap{position:relative; display:inline-block; border:1px solid var(--line-strong); background:#fff;}
-  .overlay-wrap canvas{display:block; max-width:100%; height:auto;}
+  .overlay-wrap{
+    display:inline-block; border-radius:var(--radius-md); overflow:hidden;
+    border:1px solid var(--line); background:var(--card-soft); padding:4px;
+  }
+  .overlay-wrap canvas{display:block; max-width:100%; height:auto; border-radius:10px;}
 
   .warn-list{list-style:none; margin:14px 0 0; padding:0; font-size:12.5px;}
-  .warn-list li{padding:6px 0; border-top:1px solid var(--line); color:var(--ink-soft);}
+  .warn-list li{padding:7px 0; border-top:1px solid var(--line); color:var(--ink-soft);}
   .warn-list li:first-child{border-top:none;}
   .warn-list li b{color:var(--warn);}
 
@@ -225,35 +248,35 @@
     margin-top:6px;
   }
   .proof-card{
-    background:#fff; border:1px solid var(--line-strong); padding:10px;
+    background:var(--card-soft); border-radius:var(--radius-md); padding:10px;
     position:relative;
   }
-  .proof-card::before, .proof-card::after{
-    content:''; position:absolute; width:9px; height:9px;
-    border-left:1px solid var(--press); border-top:1px solid var(--press);
+  .proof-card .chip{
+    position:absolute; top:18px; left:18px;
+    background:var(--accent); color:var(--accent-ink);
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; font-weight:600;
+    padding:3px 9px; border-radius:var(--radius-pill);
   }
-  .proof-card::before{top:4px; left:4px;}
-  .proof-card::after{bottom:4px; right:4px; border-left:none; border-top:none; border-right:1px solid var(--press); border-bottom:1px solid var(--press);}
-  .proof-card img{width:100%; display:block; border:1px solid var(--line); cursor:zoom-in;}
+  .proof-card img{width:100%; display:block; border-radius:10px; cursor:zoom-in;}
   .proof-card .cap{font-family:'IBM Plex Mono',monospace; font-size:11px; margin-top:8px; color:var(--ink-soft);}
 
   .modal{
-    position:fixed; inset:0; background:rgba(26,29,34,.9);
+    position:fixed; inset:0; background:rgba(20,21,18,.92);
     display:none; align-items:center; justify-content:center; z-index:50; padding:30px;
   }
   .modal.show{display:flex;}
-  .modal img{max-width:100%; max-height:100%; box-shadow:0 0 0 1px #fff;}
+  .modal img{max-width:100%; max-height:100%; border-radius:8px; box-shadow:0 0 0 1px rgba(255,255,255,.15);}
 
   .footer-actions{display:flex; gap:12px; flex-wrap:wrap; margin-top:18px;}
   .small-note{font-size:11.5px; color:var(--ink-soft); margin-top:8px;}
 
   ::-webkit-scrollbar{width:9px; height:9px;}
-  ::-webkit-scrollbar-thumb{background:var(--line-strong);}
+  ::-webkit-scrollbar-thumb{background:var(--line-strong); border-radius:99px;}
 
   @media (max-width:860px){
     .shell{grid-template-columns:1fr;}
     .rail{position:relative; height:auto; display:flex; flex-direction:column;}
-    .main{padding:24px;}
+    .main{padding:0;}
   }
 </style>
 </head>
@@ -297,7 +320,7 @@
         </div>
       </div>
       <div class="footer-actions">
-        <button id="btnSaveKey">儲存設定，前往上傳海報</button>
+        <button id="btnSaveKey" class="press">儲存設定，前往上傳海報</button>
       </div>
       <p class="small-note" id="providerNote"></p>
     </section>
@@ -305,13 +328,13 @@
     <!-- STEP 2 -->
     <section class="panel" data-locked="1" id="panel-2">
       <h2><span class="idx">02</span>上傳海報 A（設計完成稿）</h2>
-      <p class="hint">上傳已排好版、含所有文字的 A3 完稿圖，系統會從這張圖上讀出文字的字型、顏色、大小與位置。</p>
+      <p class="hint">上傳已排好版、含所有文字的 A3 完稿圖，系統會從這張圖上讀出文字的字型、顏色、大小、邊框與位置。</p>
       <div class="upload-box" id="dropA">
         <img class="thumb" id="thumbA" alt="">
         <div class="txt"><b id="nameA">尚未選擇檔案</b>點按此處或拖曳圖片到這裡上傳（JPG / PNG）</div>
       </div>
       <input type="file" id="fileA" accept="image/*" style="display:none">
-      <div class="footer-actions"><button id="btnToStep3" disabled>下一步</button></div>
+      <div class="footer-actions"><button id="btnToStep3" class="press" disabled>下一步</button></div>
     </section>
 
     <!-- STEP 3 -->
@@ -323,7 +346,7 @@
         <div class="txt"><b id="nameB">尚未選擇檔案</b>點按此處或拖曳圖片到這裡上傳（JPG / PNG）</div>
       </div>
       <input type="file" id="fileB" accept="image/*" style="display:none">
-      <div class="footer-actions"><button id="btnToStep4" disabled>下一步</button></div>
+      <div class="footer-actions"><button id="btnToStep4" class="press" disabled>下一步</button></div>
     </section>
 
     <!-- STEP 4 -->
@@ -335,7 +358,7 @@
         <input type="text" id="csvUrl" placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv">
       </div>
       <div class="footer-actions">
-        <button id="btnLoadCsv">讀取資料表</button>
+        <button id="btnLoadCsv" class="press">讀取資料表</button>
       </div>
       <div id="csvPreviewWrap" style="display:none; margin-top:18px;">
         <p class="mono small-note" id="csvSummary"></p>
@@ -348,7 +371,7 @@
     <!-- STEP 5 -->
     <section class="panel" data-locked="1" id="panel-5">
       <h2><span class="idx">05</span>辨識海報 A 排版</h2>
-      <p class="hint">按下開始，AI 會逐一找出海報 A 上的文字區塊，記錄每個區塊的字體、顏色、大小、對齊與位置。過程會列在下方進度紀錄中。</p>
+      <p class="hint">按下開始，AI 會逐一找出海報 A 上的文字區塊，記錄每個區塊的字體、顏色、大小、邊框、對齊與位置。過程會列在下方進度紀錄中。</p>
       <div class="footer-actions"><button id="btnAnalyze" class="press">開始製圖</button></div>
       <div class="progressbar"><div id="progressFill"></div></div>
       <div class="log" id="logBox"></div>
@@ -357,13 +380,13 @@
     <!-- STEP 6 -->
     <section class="panel" data-locked="1" id="panel-6">
       <h2><span class="idx">06</span>欄位對應與微調</h2>
-      <p class="hint">系統已自動比對辨識出的文字區塊與試算表欄位。方框畫在海報 A 的位置上供核對，下方表格可手動修正對應欄位、座標或樣式。</p>
+      <p class="hint">系統已自動比對辨識出的文字區塊與試算表欄位。方框畫在海報 A 的位置上供核對，下方表格可手動修正對應欄位、座標、字型或邊框樣式。</p>
       <div class="overlay-wrap" id="overlayWrap"></div>
       <div style="overflow-x:auto; margin-top:18px;">
         <table class="map-table" id="mapTable">
           <thead><tr>
             <th>辨識欄位</th><th>對應試算表欄位</th><th>X</th><th>Y</th><th>寬</th><th>高</th>
-            <th>字級</th><th>顏色</th><th>字重</th><th>對齊</th><th>字型</th>
+            <th>字級</th><th>字型</th><th>字重</th><th>對齊</th><th>顏色</th><th>邊框顏色</th><th>邊框粗細</th>
           </tr></thead>
           <tbody id="mapTableBody"></tbody>
         </table>
@@ -371,7 +394,7 @@
       <div class="footer-actions"><button id="btnConfirmMap" class="press">確認對應，開始套版</button></div>
     </section>
 
-    <!-- STEP 7 (validation lives here, feeds into 8) -->
+    <!-- STEP 7 -->
     <section class="panel" data-locked="1" id="panel-7">
       <h2><span class="idx">07</span>套版與格式檢查</h2>
       <p class="hint">系統依上一步的設定，把每一列試算表資料套進海報 B，並自動檢查缺漏或超出範圍的內容。</p>
@@ -406,15 +429,35 @@
 (function(){
   "use strict";
 
+  /* ---------------- font catalogue (open-source, Traditional-Chinese-capable) ---------------- */
+  const FONT_OPTIONS = [
+    { id:'Noto Sans TC',    label:'思源黑體 Noto Sans TC',   stack:"'Noto Sans TC', sans-serif" },
+    { id:'Noto Serif TC',   label:'思源宋體 Noto Serif TC',  stack:"'Noto Serif TC', serif" },
+    { id:'Noto Sans HK',    label:'思源黑體 HK',             stack:"'Noto Sans HK', sans-serif" },
+    { id:'Noto Serif HK',   label:'思源宋體 HK',             stack:"'Noto Serif HK', serif" },
+    { id:'LXGW WenKai TC',  label:'霞鶩文楷 LXGW WenKai TC', stack:"'LXGW WenKai TC', serif" },
+    { id:'Iansui',          label:'芫荽 Iansui',             stack:"'Iansui', sans-serif" },
+    { id:'Chiron Hei HK',   label:'質感黑體 Chiron Hei HK',  stack:"'Chiron Hei HK', sans-serif" }
+  ];
+  const FONT_IDS = FONT_OPTIONS.map(f => f.id);
+
+  function fontStack(id){
+    const f = FONT_OPTIONS.find(o => o.id === id);
+    if(f) return f.stack;
+    const low = (id||'').toLowerCase();
+    if(/serif|明|宋/.test(low) && !/sans|黑/.test(low)) return "'Noto Serif TC', serif";
+    return "'Noto Sans TC', sans-serif";
+  }
+
   /* ---------------- state ---------------- */
   const state = {
     provider: 'anthropic',
     apiKey: '',
-    posterA: null,      // {img, dataUrl, mime, base64}
+    posterA: null,
     posterB: null,
     csv: { headers: [], rows: [] },
-    fields: [],          // detected fields from AI
-    canvases: [],        // generated final canvases
+    fields: [],
+    canvases: [],
     warnings: []
   };
 
@@ -474,7 +517,6 @@
     return dataUrl.split(',')[1];
   }
 
-  /* simple, quote-aware CSV parser */
   function parseCSV(text){
     const rows = [];
     let row = [], field = '', inQuotes = false;
@@ -509,10 +551,8 @@
 
   function isValidHex(c){ return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test((c||'').trim()); }
 
-  function fontStack(family){
-    const f = (family||'').toLowerCase();
-    if(/serif|明|宋/.test(f) && !/sans|黑/.test(f)) return "'Noto Serif TC', serif";
-    return "'Noto Sans TC', sans-serif";
+  function escapeHtml(s){
+    return (s||'').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
   /* ---------------- Step 1: AI settings ---------------- */
@@ -604,10 +644,6 @@
     }
   });
 
-  function escapeHtml(s){
-    return (s||'').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-
   /* ---------------- Step 5: analyze poster A ---------------- */
   $('btnAnalyze').addEventListener('click', runAnalysis);
 
@@ -615,8 +651,12 @@
     return '你是一位平面設計稿件分析師。請分析這張海報影像，找出每一個獨立的文字區塊（例如主標題、副標題、日期、地點、價格、聯絡資訊等）。\n' +
     '針對每一個文字區塊，只回傳一個 JSON 陣列，不要加任何說明文字或 Markdown 標記，格式如下：\n' +
     '[{"field_label":"文字用途，例如 主標題／活動日期／地點","sample_text":"影像中實際看到的文字",' +
-    '"font_family":"serif 或 sans-serif","font_weight":"normal 或 bold","font_size_px":數字,' +
-    '"color":"#rrggbb","align":"left、center 或 right",' +
+    '"font_family":"從這個清單挑選外觀最接近的一個："' + JSON.stringify(FONT_IDS) + '，若都不像可填 sans-serif 或 serif,' +
+    '"font_weight":"normal 或 bold","font_size_px":數字,' +
+    '"color":"文字本體顏色的 16 進位色碼，例如 #1a1a1a",' +
+    '"stroke_color":"文字邊框（描邊）顏色的 16 進位色碼，若肉眼看不出邊框請填 none",' +
+    '"stroke_width_px":"邊框粗細的像素估計值，若沒有邊框請填 0",' +
+    '"align":"left、center 或 right",' +
     '"x":數字,"y":數字,"width":數字,"height":數字,"line_height":數字}]\n' +
     '影像原始尺寸為 ' + w + ' x ' + h + ' 像素，所有座標與尺寸請以此為基準，單位為像素。';
   }
@@ -703,7 +743,6 @@
       }
       return data.choices[0].message.content;
     }
-    // gemini
     const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key='+encodeURIComponent(state.apiKey), {
       method:'POST',
       headers:{'content-type':'application/json'},
@@ -740,10 +779,12 @@
       fields = fields.map((f,i) => ({
         field_label: f.field_label || ('文字區塊 '+(i+1)),
         sample_text: f.sample_text || '',
-        font_family: f.font_family || 'sans-serif',
+        font_family: FONT_IDS.includes(f.font_family) ? f.font_family : (/serif|明|宋/i.test(f.font_family||'') ? 'Noto Serif TC' : 'Noto Sans TC'),
         font_weight: /bold/i.test(f.font_weight) ? 'bold' : 'normal',
         font_size_px: Number(f.font_size_px) || 32,
         color: isValidHex(f.color) ? f.color : '#1a1a1a',
+        stroke_color: isValidHex(f.stroke_color) ? f.stroke_color : '#ffffff',
+        stroke_width_px: Number(f.stroke_width_px) || 0,
         align: ['left','center','right'].includes(f.align) ? f.align : 'left',
         x: Number(f.x)||0, y: Number(f.y)||0,
         width: Number(f.width)||200, height: Number(f.height)||60,
@@ -779,14 +820,20 @@
     ctx.lineWidth = Math.max(2, img.naturalWidth/500);
     ctx.font = Math.round(img.naturalWidth/70) + 'px sans-serif';
     state.fields.forEach((f, i) => {
-      ctx.strokeStyle = '#B23A2E';
+      ctx.strokeStyle = '#C1503C';
       ctx.strokeRect(f.x, f.y, f.width, f.height);
-      ctx.fillStyle = '#B23A2E';
+      ctx.fillStyle = '#C1503C';
       ctx.fillRect(f.x, Math.max(0,f.y-ctx.lineWidth*10), ctx.lineWidth*10*(String(i+1).length+1), ctx.lineWidth*10);
       ctx.fillStyle = '#fff';
       ctx.fillText((i+1)+'', f.x+4, Math.max(0,f.y-ctx.lineWidth*10)+ctx.lineWidth*8);
     });
     wrap.appendChild(canvas);
+  }
+
+  function fontOptionsHtml(selected){
+    return FONT_OPTIONS.map(f =>
+      '<option value="'+f.id+'" style="font-family:'+f.stack+'"'+(f.id===selected?' selected':'')+'>'+f.label+'</option>'
+    ).join('');
   }
 
   function buildMappingUI(){
@@ -803,22 +850,24 @@
           '<option value="">— 不套用 —</option>' +
           headers.map(h => '<option value="'+escapeHtml(h)+'"'+(h===autoMatch?' selected':'')+'>'+escapeHtml(h)+'</option>').join('') +
         '</select></td>' +
-        '<td><input type="number" data-k="x" value="'+f.x+'" style="width:64px"></td>' +
-        '<td><input type="number" data-k="y" value="'+f.y+'" style="width:64px"></td>' +
-        '<td><input type="number" data-k="width" value="'+f.width+'" style="width:64px"></td>' +
-        '<td><input type="number" data-k="height" value="'+f.height+'" style="width:64px"></td>' +
-        '<td><input type="number" data-k="font_size_px" value="'+f.font_size_px+'" style="width:56px"></td>' +
-        '<td><input type="color" data-k="color" value="'+f.color+'"></td>' +
+        '<td><input type="number" data-k="x" value="'+f.x+'" style="width:60px"></td>' +
+        '<td><input type="number" data-k="y" value="'+f.y+'" style="width:60px"></td>' +
+        '<td><input type="number" data-k="width" value="'+f.width+'" style="width:60px"></td>' +
+        '<td><input type="number" data-k="height" value="'+f.height+'" style="width:60px"></td>' +
+        '<td><input type="number" data-k="font_size_px" value="'+f.font_size_px+'" style="width:54px"></td>' +
+        '<td><select data-k="font_family">'+fontOptionsHtml(f.font_family)+'</select></td>' +
         '<td><select data-k="font_weight"><option value="normal"'+(f.font_weight==='normal'?' selected':'')+'>normal</option><option value="bold"'+(f.font_weight==='bold'?' selected':'')+'>bold</option></select></td>' +
         '<td><select data-k="align">' +
           ['left','center','right'].map(a => '<option value="'+a+'"'+(f.align===a?' selected':'')+'>'+a+'</option>').join('') +
         '</select></td>' +
-        '<td><select data-k="font_family"><option value="sans-serif"'+(f.font_family!=='serif'?' selected':'')+'>黑體</option><option value="serif"'+(f.font_family==='serif'?' selected':'')+'>明體</option></select></td>';
+        '<td><input type="color" data-k="color" value="'+f.color+'"></td>' +
+        '<td><input type="color" data-k="stroke_color" value="'+f.stroke_color+'"></td>' +
+        '<td><input type="number" data-k="stroke_width_px" value="'+f.stroke_width_px+'" style="width:50px" min="0" step="0.5"></td>';
       tr.querySelectorAll('[data-k]').forEach(el => {
         el.addEventListener('input', () => {
           const k = el.getAttribute('data-k');
           if(k === 'map'){ f.mapTo = el.value; return; }
-          if(['x','y','width','height','font_size_px'].includes(k)) f[k] = Number(el.value)||0;
+          if(['x','y','width','height','font_size_px','stroke_width_px'].includes(k)) f[k] = Number(el.value)||0;
           else f[k] = el.value;
         });
         el.addEventListener('change', () => el.dispatchEvent(new Event('input')));
@@ -867,12 +916,21 @@
       size -= 1;
     }
     const overflow = lines.length * lineHeight > f.height;
-    ctx.fillStyle = isValidHex(f.color) ? f.color : '#1a1a1a';
     ctx.textAlign = f.align;
     ctx.textBaseline = 'top';
     const anchorX = f.align === 'left' ? f.x : f.align === 'right' ? f.x + f.width : f.x + f.width/2;
+    const hasStroke = f.stroke_width_px > 0;
+    if(hasStroke){
+      ctx.lineJoin = 'round';
+      ctx.miterLimit = 2;
+      ctx.lineWidth = f.stroke_width_px * 2; // stroke straddles the path centreline
+      ctx.strokeStyle = isValidHex(f.stroke_color) ? f.stroke_color : '#ffffff';
+    }
+    ctx.fillStyle = isValidHex(f.color) ? f.color : '#1a1a1a';
     lines.forEach((line, i) => {
-      ctx.fillText(line, anchorX, f.y + i*lineHeight);
+      const ly = f.y + i*lineHeight;
+      if(hasStroke) ctx.strokeText(line, anchorX, ly);
+      ctx.fillText(line, anchorX, ly);
     });
     return {overflow, finalSize: size};
   }
@@ -888,6 +946,16 @@
       $('genSummary').textContent = '沒有任何文字區塊對應到資料表欄位，請回到上一步設定對應關係。';
       return;
     }
+
+    // make sure all chosen webfonts are actually loaded before measuring/drawing
+    const usedFonts = Array.from(new Set(usableFields.map(f => f.font_family)));
+    await Promise.all(usedFonts.map(id => {
+      const stack = fontStack(id);
+      return Promise.all([
+        document.fonts.load('400 40px ' + stack),
+        document.fonts.load('700 40px ' + stack)
+      ]).catch(()=>{});
+    }));
 
     const rows = state.csv.rows;
     for(let r=0; r<rows.length; r++){
@@ -913,7 +981,6 @@
 
       state.canvases.push({canvas, label: row[0] || ('第 '+(r+2)+' 列')});
       setProgress('progressFill2', Math.round(((r+1)/rows.length)*100));
-      // yield to keep UI responsive
       await new Promise(res => setTimeout(res, 0));
     }
 
@@ -946,6 +1013,9 @@
     state.canvases.forEach((item, i) => {
       const card = document.createElement('div');
       card.className = 'proof-card';
+      const chip = document.createElement('div');
+      chip.className = 'chip';
+      chip.textContent = '№ ' + (i+1);
       const img = document.createElement('img');
       img.src = item.canvas.toDataURL('image/jpeg', 0.85);
       img.addEventListener('click', () => {
@@ -954,7 +1024,8 @@
       });
       const cap = document.createElement('div');
       cap.className = 'cap';
-      cap.textContent = '№ ' + (i+1) + '　' + item.label;
+      cap.textContent = item.label;
+      card.appendChild(chip);
       card.appendChild(img);
       card.appendChild(cap);
       grid.appendChild(card);
