@@ -273,6 +273,37 @@
   .footer-actions{display:flex; gap:12px; flex-wrap:wrap; margin-top:18px;}
   .small-note{font-size:11.5px; color:var(--ink-soft); margin-top:8px;}
 
+  .version-badge{
+    position:fixed;
+    top:16px; right:16px;
+    z-index:60;
+    background:var(--card-dark);
+    color:var(--card-dark-text);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    padding:5px 13px;
+    border-radius:var(--radius-pill);
+    box-shadow:var(--shadow-card);
+    letter-spacing:.02em;
+    pointer-events:none;
+  }
+
+  .row-editor-panel{
+    background:var(--card); border-radius:var(--radius-lg); padding:26px;
+    max-width:640px; width:100%; max-height:90vh; overflow-y:auto;
+  }
+  .row-editor-panel h3{margin:0 0 4px; font-size:15px;}
+  .row-editor-panel .hint{margin:0 0 16px;}
+  .row-editor-field{margin-bottom:12px;}
+  .row-editor-field label{font-size:12px; color:var(--ink-soft); margin-bottom:4px; display:block;}
+  .row-editor-field textarea{
+    width:100%; font-family:'Space Grotesk',sans-serif; font-size:13px;
+    padding:9px 11px; border:1px solid var(--line-strong); border-radius:10px;
+    resize:vertical; min-height:44px; background:var(--card-soft); color:var(--ink);
+  }
+  .card-edit-btn{margin-top:8px; width:100%; padding:7px 10px; font-size:12px;}
+  .overflow-badge{margin-top:6px;}
+
   ::-webkit-scrollbar{width:9px; height:9px;}
   ::-webkit-scrollbar-thumb{background:var(--line-strong); border-radius:99px;}
 
@@ -284,6 +315,7 @@
 </style>
 </head>
 <body>
+<div class="version-badge">v0.08</div>
 
 <div class="shell">
   <nav class="rail">
@@ -444,16 +476,41 @@
     <section class="panel" data-locked="1" id="panel-9">
       <h2><span class="idx">09</span>輸出列印</h2>
       <p class="hint">確認預覽無誤後，可下載整批 PDF 或直接開啟瀏覽器列印，紙張已設定為 A3。</p>
+      <div class="row">
+        <div class="field" style="max-width:220px;">
+          <label for="printOrientation">紙張方向</label>
+          <select id="printOrientation">
+            <option value="auto">自動（依海報比例判斷）</option>
+            <option value="portrait">直式</option>
+            <option value="landscape">橫式</option>
+          </select>
+        </div>
+      </div>
       <div class="footer-actions">
         <button id="btnPdf" class="press">下載 PDF</button>
         <button id="btnPrint" class="secondary">開啟列印</button>
       </div>
+      <p class="small-note">列印視窗開啟後，若需要調整印表機本身的設定（紙張來源、列印品質、色彩模式等），點選瀏覽器列印視窗裡的「更多設定」就可以進入該印表機的原生設定選項。</p>
     </section>
 
   </main>
 </div>
 
 <div class="modal" id="modal"><img id="modalImg" alt=""></div>
+
+<div class="modal" id="rowEditorModal">
+  <div class="row-editor-panel">
+    <h3 id="rowEditorTitle">編輯這張海報</h3>
+    <p class="hint">拖曳方框調整這一張的文字位置與大小，或直接修改下面的文字內容，只會影響這一張，不影響其他張。</p>
+    <div class="overlay-wrap" id="rowEditorCanvasWrap"></div>
+    <div id="rowEditorFields" style="margin-top:16px;"></div>
+    <div class="footer-actions">
+      <button id="btnRowEditorApply" class="press" type="button">套用變更</button>
+      <button id="btnRowEditorReset" class="secondary" type="button">重設為預設</button>
+      <button id="btnRowEditorClose" class="secondary" type="button">關閉</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -495,6 +552,7 @@
     csv: { headers: [], rows: [] },
     fields: [],
     canvases: [],
+    rowOverrides: {},
     warnings: []
   };
 
@@ -1327,13 +1385,55 @@
     return {overflow, finalSize: size};
   }
 
+  function usableFieldList(){
+    return state.fields.filter(f => f.mapTo);
+  }
+
+  /* Builds (or rebuilds) the canvas for one CSV row, applying any per-row
+     overrides (position/size or text) saved for that row. Reused both for
+     the initial batch generation and after an individual poster is edited. */
+  function composePoster(rowIndex){
+    const usableFields = usableFieldList();
+    const row = state.csv.rows[rowIndex];
+    const overrides = state.rowOverrides[rowIndex] || {};
+
+    const canvas = document.createElement('canvas');
+    canvas.width = state.posterB.img.naturalWidth;
+    canvas.height = state.posterB.img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(state.posterB.img, 0, 0);
+
+    const rowWarnings = [];
+    let anyOverflow = false;
+
+    usableFields.forEach((f, fi) => {
+      const colIndex = state.csv.headers.indexOf(f.mapTo);
+      const csvValue = colIndex >= 0 ? (row[colIndex]||'').trim() : '';
+      const ov = overrides[fi] || {};
+      const value = ov.text !== undefined ? ov.text.trim() : csvValue;
+      if(!value){
+        rowWarnings.push('「' + f.mapTo + '」欄位是空的（對應「' + f.field_label + '」）。');
+        return;
+      }
+      const effective = Object.assign({}, f, ov.geom || {});
+      const result = fitAndDraw(ctx, value, effective);
+      if(result.overflow){
+        anyOverflow = true;
+        rowWarnings.push('「' + f.field_label + '」文字過長，已縮小至 ' + result.finalSize + 'px 仍可能超出範圍。');
+      }
+    });
+
+    return { canvas, rowWarnings, anyOverflow };
+  }
+
   async function generatePosters(){
     setProgress('progressFill2', 0);
     $('warnList').innerHTML = '';
     state.canvases = [];
     state.warnings = [];
+    state.rowOverrides = {};
 
-    const usableFields = state.fields.filter(f => f.mapTo);
+    const usableFields = usableFieldList();
     if(usableFields.length === 0){
       $('genSummary').textContent = '沒有任何文字區塊對應到資料表欄位，請回到上一步設定對應關係。';
       return;
@@ -1350,27 +1450,9 @@
 
     const rows = state.csv.rows;
     for(let r=0; r<rows.length; r++){
-      const row = rows[r];
-      const canvas = document.createElement('canvas');
-      canvas.width = state.posterB.img.naturalWidth;
-      canvas.height = state.posterB.img.naturalHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(state.posterB.img, 0, 0);
-
-      usableFields.forEach(f => {
-        const colIndex = state.csv.headers.indexOf(f.mapTo);
-        const value = colIndex >= 0 ? (row[colIndex]||'').trim() : '';
-        if(!value){
-          state.warnings.push('第 ' + (r+2) + ' 列：「' + f.mapTo + '」欄位是空的（對應「' + f.field_label + '」）。');
-          return;
-        }
-        const result = fitAndDraw(ctx, value, f);
-        if(result.overflow){
-          state.warnings.push('第 ' + (r+2) + ' 列：「' + f.field_label + '」文字過長，已縮小至 ' + result.finalSize + 'px 仍可能超出範圍，建議精簡內容或加大版位。');
-        }
-      });
-
-      state.canvases.push({canvas, label: row[0] || ('第 '+(r+2)+' 列')});
+      const { canvas, rowWarnings, anyOverflow } = composePoster(r);
+      rowWarnings.forEach(w => state.warnings.push('第 ' + (r+2) + ' 列：' + w));
+      state.canvases.push({ canvas, label: rows[r][0] || ('第 '+(r+2)+' 列'), rowIndex:r, hasOverflow:anyOverflow });
       setProgress('progressFill2', Math.round(((r+1)/rows.length)*100));
       await new Promise(res => setTimeout(res, 0));
     }
@@ -1400,37 +1482,231 @@
   function buildPreview(){
     const grid = $('proofGrid');
     grid.innerHTML = '';
-    $('previewHint').textContent = '共 ' + state.canvases.length + ' 張，欄位 ' + state.fields.filter(f=>f.mapTo).length + ' 個，點圖可放大檢視。';
-    state.canvases.forEach((item, i) => {
-      const card = document.createElement('div');
-      card.className = 'proof-card';
-      const chip = document.createElement('div');
-      chip.className = 'chip';
-      chip.textContent = '№ ' + (i+1);
-      const img = document.createElement('img');
-      img.src = item.canvas.toDataURL('image/jpeg', 0.85);
-      img.addEventListener('click', () => {
-        $('modalImg').src = item.canvas.toDataURL('image/png');
-        $('modal').classList.add('show');
-      });
-      const cap = document.createElement('div');
-      cap.className = 'cap';
-      cap.textContent = item.label;
-      card.appendChild(chip);
-      card.appendChild(img);
-      card.appendChild(cap);
-      grid.appendChild(card);
-    });
+    $('previewHint').textContent = '共 ' + state.canvases.length + ' 張，欄位 ' + state.fields.filter(f=>f.mapTo).length + ' 個，點圖可放大檢視，也可以個別編輯文字位置與內容。';
+    state.canvases.forEach((item, i) => grid.appendChild(makeProofCard(i)));
   }
+
+  function makeProofCard(i){
+    const item = state.canvases[i];
+    const card = document.createElement('div');
+    card.className = 'proof-card';
+    card.id = 'proofCard' + i;
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.textContent = '№ ' + (i+1);
+    const img = document.createElement('img');
+    img.src = item.canvas.toDataURL('image/jpeg', 0.85);
+    img.addEventListener('click', () => {
+      $('modalImg').src = item.canvas.toDataURL('image/png');
+      $('modal').classList.add('show');
+    });
+    const cap = document.createElement('div');
+    cap.className = 'cap';
+    cap.textContent = item.label;
+    const editBtn = document.createElement('button');
+    editBtn.type = 'button';
+    editBtn.className = 'secondary card-edit-btn';
+    editBtn.textContent = '編輯這張';
+    editBtn.addEventListener('click', () => openRowEditor(i));
+    card.appendChild(chip);
+    card.appendChild(img);
+    card.appendChild(cap);
+    if(item.hasOverflow){
+      const badge = document.createElement('span');
+      badge.className = 'badge warn overflow-badge';
+      badge.textContent = '文字可能超框';
+      card.appendChild(badge);
+    }
+    card.appendChild(editBtn);
+    return card;
+  }
+
+  function refreshProofCard(i){
+    const old = document.getElementById('proofCard'+i);
+    const fresh = makeProofCard(i);
+    if(old) old.replaceWith(fresh);
+  }
+
+  /* ---------------- per-row editor: adjust one poster's text position / content ---------------- */
+  let rowEditorState = null;
+
+  function openRowEditor(rowIndex){
+    const usableFields = usableFieldList();
+    const existing = state.rowOverrides[rowIndex] || {};
+    const row = state.csv.rows[rowIndex];
+
+    const workingFields = usableFields.map((f, fi) => {
+      const ov = existing[fi] || {};
+      return Object.assign({}, f, ov.geom || {});
+    });
+    const textValues = usableFields.map((f, fi) => {
+      const ov = existing[fi] || {};
+      if(ov.text !== undefined) return ov.text;
+      const colIndex = state.csv.headers.indexOf(f.mapTo);
+      return colIndex >= 0 ? (row[colIndex]||'') : '';
+    });
+
+    $('rowEditorTitle').textContent = '編輯這張海報　·　' + state.canvases[rowIndex].label;
+
+    const wrap = $('rowEditorCanvasWrap');
+    wrap.innerHTML = '';
+    const canvas = document.createElement('canvas');
+    canvas.width = state.posterB.img.naturalWidth;
+    canvas.height = state.posterB.img.naturalHeight;
+    canvas.style.width = '100%';
+    canvas.style.maxWidth = '560px';
+    const ctx = canvas.getContext('2d');
+    wrap.appendChild(canvas);
+
+    let activeIdx = -1;
+    let drag = null;
+
+    function redraw(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(state.posterB.img,0,0);
+      workingFields.forEach((f, fi) => {
+        const val = (textValues[fi]||'').trim();
+        if(val) fitAndDraw(ctx, val, f);
+      });
+      const lw = Math.max(2, canvas.width/500);
+      workingFields.forEach((f, fi) => {
+        ctx.lineWidth = lw;
+        ctx.strokeStyle = fi === activeIdx ? '#1C1D1B' : '#E3F24E';
+        ctx.strokeRect(f.x, f.y, f.width, f.height);
+        const hs = lw*4;
+        ctx.fillStyle = fi === activeIdx ? '#1C1D1B' : '#E3F24E';
+        ctx.fillRect(f.x+f.width-hs, f.y+f.height-hs, hs*2, hs*2);
+      });
+    }
+
+    function scale(){ return canvas.width / canvas.getBoundingClientRect().width; }
+    function hit(px,py){
+      for(let i=workingFields.length-1; i>=0; i--){
+        const f = workingFields[i];
+        const lw = Math.max(2, canvas.width/500), hs = lw*4;
+        const hx = f.x+f.width-hs, hy = f.y+f.height-hs;
+        if(px>=hx-hs*0.5 && px<=hx+hs*2.5 && py>=hy-hs*0.5 && py<=hy+hs*2.5) return {i, mode:'resize'};
+        if(px>=f.x && px<=f.x+f.width && py>=f.y && py<=f.y+f.height) return {i, mode:'move'};
+      }
+      return null;
+    }
+    function onDown(e){
+      const rect = canvas.getBoundingClientRect(); const s = scale();
+      const px=(e.clientX-rect.left)*s, py=(e.clientY-rect.top)*s;
+      const h = hit(px,py);
+      if(!h) return;
+      activeIdx = h.i;
+      const f = workingFields[h.i];
+      drag = {i:h.i, mode:h.mode, startPx:px, startPy:py, orig:{x:f.x,y:f.y,width:f.width,height:f.height}};
+      redraw();
+    }
+    function onMove(e){
+      if(!drag) return;
+      const rect = canvas.getBoundingClientRect(); const s = scale();
+      const px=(e.clientX-rect.left)*s, py=(e.clientY-rect.top)*s;
+      const f = workingFields[drag.i];
+      const dx = px-drag.startPx, dy = py-drag.startPy;
+      if(drag.mode === 'move'){
+        f.x = Math.round(drag.orig.x+dx);
+        f.y = Math.round(drag.orig.y+dy);
+      } else {
+        f.width = Math.max(10, Math.round(drag.orig.width+dx));
+        f.height = Math.max(10, Math.round(drag.orig.height+dy));
+      }
+      redraw();
+    }
+    function onUp(){ drag = null; }
+    canvas.addEventListener('mousedown', onDown);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+
+    redraw();
+
+    const fieldsBox = $('rowEditorFields');
+    fieldsBox.innerHTML = '';
+    usableFields.forEach((f, fi) => {
+      const div = document.createElement('div');
+      div.className = 'row-editor-field';
+      div.innerHTML = '<label>'+escapeHtml(f.field_label)+'（對應「'+escapeHtml(f.mapTo)+'」）</label>' +
+        '<textarea data-fi="'+fi+'">'+escapeHtml(textValues[fi])+'</textarea>';
+      const ta = div.querySelector('textarea');
+      ta.addEventListener('focus', () => { activeIdx = fi; redraw(); });
+      ta.addEventListener('input', () => { textValues[fi] = ta.value; redraw(); });
+      fieldsBox.appendChild(div);
+    });
+
+    rowEditorState = {
+      rowIndex, usableFields, workingFields, textValues,
+      cleanup(){
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      }
+    };
+
+    $('rowEditorModal').classList.add('show');
+  }
+
+  function closeRowEditor(){
+    if(rowEditorState) rowEditorState.cleanup();
+    rowEditorState = null;
+    $('rowEditorModal').classList.remove('show');
+  }
+
+  $('btnRowEditorClose').addEventListener('click', closeRowEditor);
+  $('rowEditorModal').addEventListener('click', e => {
+    if(e.target.id === 'rowEditorModal') closeRowEditor();
+  });
+
+  $('btnRowEditorApply').addEventListener('click', () => {
+    if(!rowEditorState) return;
+    const { rowIndex, usableFields, workingFields, textValues } = rowEditorState;
+    const overrides = {};
+    usableFields.forEach((f, fi) => {
+      const wf = workingFields[fi];
+      const geomChanged = f.x!==wf.x || f.y!==wf.y || f.width!==wf.width || f.height!==wf.height;
+      const colIndex = state.csv.headers.indexOf(f.mapTo);
+      const originalText = colIndex >= 0 ? (state.csv.rows[rowIndex][colIndex]||'') : '';
+      const textChanged = textValues[fi] !== originalText;
+      if(geomChanged || textChanged){
+        overrides[fi] = {};
+        if(geomChanged) overrides[fi].geom = {x:wf.x, y:wf.y, width:wf.width, height:wf.height};
+        if(textChanged) overrides[fi].text = textValues[fi];
+      }
+    });
+    state.rowOverrides[rowIndex] = overrides;
+    const { canvas, anyOverflow } = composePoster(rowIndex);
+    state.canvases[rowIndex].canvas = canvas;
+    state.canvases[rowIndex].hasOverflow = anyOverflow;
+    refreshProofCard(rowIndex);
+    closeRowEditor();
+  });
+
+  $('btnRowEditorReset').addEventListener('click', () => {
+    if(!rowEditorState) return;
+    const rowIndex = rowEditorState.rowIndex;
+    delete state.rowOverrides[rowIndex];
+    const { canvas, anyOverflow } = composePoster(rowIndex);
+    state.canvases[rowIndex].canvas = canvas;
+    state.canvases[rowIndex].hasOverflow = anyOverflow;
+    refreshProofCard(rowIndex);
+    closeRowEditor();
+  });
+
 
   $('modal').addEventListener('click', () => $('modal').classList.remove('show'));
 
   /* ---------------- Step 9: output ---------------- */
+  function resolveOrientation(){
+    const choice = $('printOrientation').value;
+    if(choice === 'portrait' || choice === 'landscape') return choice;
+    const first = state.canvases[0].canvas;
+    return first.width >= first.height ? 'landscape' : 'portrait';
+  }
+
   $('btnPdf').addEventListener('click', () => {
     if(!state.canvases.length){ alert('尚未產出任何海報。'); return; }
     const { jsPDF } = window.jspdf;
-    const first = state.canvases[0].canvas;
-    const orientation = first.width >= first.height ? 'landscape' : 'portrait';
+    const orientation = resolveOrientation();
     const doc = new jsPDF({ unit:'mm', format:'a3', orientation });
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
@@ -1443,11 +1719,12 @@
 
   $('btnPrint').addEventListener('click', () => {
     if(!state.canvases.length){ alert('尚未產出任何海報。'); return; }
+    const orientation = resolveOrientation();
     const w = window.open('', '_blank');
     const imgs = state.canvases.map(item => '<img src="'+item.canvas.toDataURL('image/png')+'">').join('');
     w.document.write(
       '<html><head><title>列印</title><style>' +
-      '@page{ size:A3; margin:0; } body{ margin:0; }' +
+      '@page{ size:A3 ' + orientation + '; margin:0; } body{ margin:0; }' +
       'img{ width:100%; display:block; page-break-after:always; }' +
       '</style></head><body>' + imgs + '</body></html>'
     );
