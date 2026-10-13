@@ -1,0 +1,36 @@
+# 系統文件
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# 備份文件
+*.bak
+*.backup
+*.old
+*backup*.json
+
+# 臨時文件
+.temp/
+tmp/
+*.tmp
+
+# 本地開發
+node_modules/
+package-lock.json
+yarn.lock
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# 其他
+.env
+.env.local
+dist/
+build/
